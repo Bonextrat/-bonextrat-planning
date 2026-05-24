@@ -283,24 +283,29 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
   const [copied, setCopied] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const planningText = `BONEXTRAT — Planning ${MOIS_LIST[month]} ${year}
-=======================================
-Intervenant : ${inter.nom}
-Poste : ${inter.poste||""}
-=======================================
+  const lignes = ms.map(m => {
+    const d = m.date.split("-").reverse().join("/");
+    const note = m.note ? " | Note : " + m.note : "";
+    return d + "  |  " + m.hotel + " | " + m.debut + " - " + m.fin + " (" + m.heures + "h)" + note;
+  }).join("\n");
 
-${ms.map(m=>`${m.date.split("-").reverse().join("/")}  |  ${m.hotel}
-  Horaires : ${m.debut} – ${m.fin}  (${m.heures}h)
-  ${m.note?`Note : ${m.note}`:""}
-`).join("
-")}
-=======================================
-TOTAL : ${totalH}h${totalE>0?` — ${totalE.toFixed(2)}€ HT`:""}
-=======================================
-
-Ce planning vous a ete envoye par BONEXTRAT
-185 rue Saint-Denis, 75002 Paris
-bonextrat@outlook.com`;
+  const planningText = [
+    "BONEXTRAT - Planning " + MOIS_LIST[month] + " " + year,
+    "=======================================",
+    "Intervenant : " + inter.nom,
+    "Poste : " + (inter.poste||""),
+    "=======================================",
+    "",
+    lignes,
+    "",
+    "=======================================",
+    "TOTAL : " + totalH + "h" + (totalE > 0 ? " - " + totalE.toFixed(2) + "EUR HT" : ""),
+    "=======================================",
+    "",
+    "Ce planning vous a ete envoye par BONEXTRAT",
+    "185 rue Saint-Denis, 75002 Paris",
+    "bonextrat@outlook.com"
+  ].join("\n");
 
   const handleCopy = () => {
     navigator.clipboard.writeText(planningText).then(()=>{
