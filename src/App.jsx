@@ -200,7 +200,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
           {(allIntervenants||INIT_INTERVENANTS).map(i=><div key={i.id} onClick={()=>setInter(i)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:9,cursor:"pointer",border:"1.5px solid",borderColor:inter.id===i.id?"#1C3557":"#E2E8F0",background:inter.id===i.id?"#EBF0F8":"#F8FAFC"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><Av nom={i.nom} color={i.color} size={26}/><div><div style={{fontSize:12,fontWeight:600,color:"#1E293B"}}>{i.nom}</div><div style={{fontSize:10,color:"#64748B"}}>{i.poste}</div></div></div>
-            <div style={{fontSize:11,color:"#64748B",fontWeight:600}}>{i.tarif>0?`${i.tarif}€/h`:"Salarie"}</div>
+            <div style={{fontSize:11,color:"#64748B",fontWeight:600}}>{i.tarif>0?`${i.tarif}EUR/h`:"Salarie"}</div>
           </div>)}
         </div>
       </div>
@@ -234,7 +234,7 @@ function ModalIntervenant({onClose,onSave}){
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
       <div style={{background:"#F8FAFC",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,border:"1px solid #E2E8F0"}}>
         <div style={{width:34,height:34,borderRadius:"50%",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{nom.slice(0,2).toUpperCase()||"NP"}</div>
-        <div><div style={{fontWeight:600,color:"#1E293B",fontSize:12}}>{nom||"Prenom"}</div><div style={{fontSize:10,color:"#64748B"}}>{poste} · {type!=="salarie"?`${tarif}€/h`:"Salarie"}</div></div>
+        <div><div style={{fontWeight:600,color:"#1E293B",fontSize:12}}>{nom||"Prenom"}</div><div style={{fontSize:10,color:"#64748B"}}>{poste} - {type!=="salarie"?`${tarif}EUR/h`:"Salarie"}</div></div>
       </div>
       <div style={{display:"flex",gap:8}}><button onClick={onClose} style={{...bS,flex:1}}>Annuler</button><button disabled={err} onClick={()=>onSave({id:Date.now(),nom:nom.trim(),type,tarif,color,siret,adresse,poste})} style={{...bP,flex:2,opacity:err?0.4:1}}>Ajouter</button></div>
     </div>
@@ -481,7 +481,7 @@ function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, mont
               <div style={{width:8,height:8,borderRadius:"50%",background:mode==="intervenant"?ligne.color:ligne.color,marginTop:5,flexShrink:0}}/>
               <div style={{flex:1}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#1E293B"}}>{ligne.nom}</div>
-                <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:`${ligne.tarif}€/h`}</div>
+                <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:`${ligne.tarif}EUR/h`}</div>
                 {mode==="intervenant"&&<div style={{marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                   <span style={{background:TYPE_MAP[ligne.type]?.bg,color:TYPE_MAP[ligne.type]?.color,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[ligne.type]?.label}</span>
                   <button
@@ -655,7 +655,7 @@ export default function App(){
           {[
             {l:"Missions",v:thisM.length},
             {l:"Heures",v:`${totalH}h`},
-            {l:"Cout AE",v:`${totalCout.toFixed(0)}€`},
+            {l:"Cout AE",v:`${totalCout.toFixed(0)}EUR`},
           ].map(s=><div key={s.l} style={{textAlign:"center"}}>
             <div style={{fontSize:14,fontWeight:700,color:"#1C3557"}}>{s.v}</div>
             <div style={{fontSize:9,color:"#94A3B8"}}>{s.l}</div>
@@ -739,7 +739,7 @@ export default function App(){
           {[
             {l:"Missions",v:thisM.length,s:"ce mois"},
             {l:"Heures",v:`${totalH}h`,s:"d'intervention"},
-            {l:"Cout AE",v:`${totalCout.toFixed(0)}€`,s:"HT",c:"#065F46"},
+            {l:"Cout AE",v:`${totalCout.toFixed(0)}EUR`,s:"HT",c:"#065F46"},
             {l:"Hotels",v:statsHotels.length,s:"actifs"},
           ].map(s=><div key={s.l} style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #E2E8F0"}}>
             <div style={{fontSize:10,color:"#94A3B8",fontWeight:600,marginBottom:6}}>{s.l}</div>
