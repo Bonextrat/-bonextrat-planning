@@ -348,21 +348,20 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
       m.heures,
       m.montant.toFixed(2),
       m.intervenant.type
-    ].join(",")+"
-";
+    ].join(",")+"\n";
   });
 
   csv += "\n=== INTERVENANTS ===\n";
   csv += "Nom,Type,Poste,Tarif EUR/h,SIRET\n";
   intervenants.forEach(i=>{
-    csv += ['"'+i.nom+'"',i.type,'"'+(i.poste||"")+'"',i.tarif,'"'+(i.siret||"")+'"'].join(",")+"
+    csv += ['"'+i.nom+'"',i.type,'"'+(i.poste||"")+'"',i.tarif,'"'+(i.siret||"")+'"'].join(",")+"\n"+
 ";
   });
 
   csv += "\n=== HOTELS ===\n";
   csv += "Nom,Tarif EUR/h,Adresse,Contact\n";
   hotels.forEach(h=>{
-    csv += ['"'+h.nom+'"',h.tarif||0,'"'+(h.adresse||"")+'"','"'+(h.contact||"")+'"'].join(",")+"
+    csv += ['"'+h.nom+'"',h.tarif||0,'"'+(h.adresse||"")+'"','"'+(h.contact||"")+'"'].join(",")+"\n"+
 ";
   });
 
@@ -372,7 +371,7 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
     const ms=allMissions.filter(m=>m.intervenant.id===i.id);
     const h=ms.reduce((a,m)=>a+m.heures,0);
     const e=ms.reduce((a,m)=>a+m.montant,0);
-    if(h>0) csv += ['"'+i.nom+'"',i.type,h,ms.length,e.toFixed(2)].join(",")+"
+    if(h>0) csv += ['"'+i.nom+'"',i.type,h,ms.length,e.toFixed(2)].join(",")+"\n"+
 ";
   });
 
@@ -382,7 +381,7 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
     const ms=allMissions.filter(m=>m.hotel===h.nom);
     const nh=ms.reduce((a,m)=>a+m.heures,0);
     const ca=nh*(h.tarif||0);
-    if(nh>0) csv += ['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(",")+"
+    if(nh>0) csv += ['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(",")+"\n"+
 ";
   });
 
@@ -393,7 +392,7 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
     const ms=allMissions.filter(m2=>m2.date.startsWith(prefix));
     const h=ms.reduce((a,m2)=>a+m2.heures,0);
     const e=ms.filter(m2=>m2.intervenant.type!=="salarie").reduce((a,m2)=>a+m2.montant,0);
-    if(ms.length>0) csv += ['"'+m+" "+year+'"',h,ms.length,e.toFixed(2)].join(",")+"
+    if(ms.length>0) csv += ['"'+m+" "+year+'"',h,ms.length,e.toFixed(2)].join(",")+"\n"+
 ";
   });
 
