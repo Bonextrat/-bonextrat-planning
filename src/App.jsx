@@ -182,7 +182,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
   const [note,setNote]=useState(existing?.note||"");
   const heures=calcH(debut,fin); const montant=inter.tarif*heures;
   const ok=debut&&fin&&heures>0;
-  return <Modal title={existing?"Modifier la mission":`Mission — ${date?.split("-").reverse().join("/")}`} onClose={onClose}>
+  return <Modal title={existing?"Modifier la mission":`Mission - ${date?.split("-").reverse().join("/")}`} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
       <div><label style={lbl}>Hotel</label>
         <select style={inp} value={hotel} onChange={e=>setHotel(e.target.value)}>
@@ -320,7 +320,7 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
   };
 
   const handleEmail = () => {
-    const subj = encodeURIComponent(`Votre planning Bonextrat — ${MOIS_LIST[month]} ${year}`);
+    const subj = encodeURIComponent(`Votre planning Bonextrat - ${MOIS_LIST[month]} ${year}`);
     const body = encodeURIComponent(planningText);
     window.open(`mailto:${email}?subject=${subj}&body=${body}`, "_blank");
     setSent(true);
@@ -356,7 +356,7 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
                   <span style={{fontWeight:600,color:"#1E293B"}}>{m.date.split("-").reverse().join("/")}</span>
                   <span style={{color:"#64748B"}}> · {m.hotel}</span>
                 </div>
-                <div style={{color:"#1C3557",fontWeight:600}}>{m.debut}–{m.fin} ({m.heures}h)</div>
+                <div style={{color:"#1C3557",fontWeight:600}}>{m.debut}-{m.fin} ({m.heures}h)</div>
               </div>)
           }
         </div>
@@ -407,7 +407,7 @@ function ShiftBloc({m, onClick, mode}){
     userSelect:"none",
   }}>
     <div>{label}</div>
-    <div style={{fontSize:8,opacity:0.9}}>{m.debut}–{m.fin}</div>
+    <div style={{fontSize:8,opacity:0.9}}>{m.debut}-{m.fin}</div>
   </div>;
 }
 
