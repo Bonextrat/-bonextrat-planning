@@ -1,40 +1,53 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc } from "firebase/firestore";
 
-// --- DATA ---------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyBGSuQYfId3GAtymM0S11mnxVlrIk0CHA4",
+  authDomain: "bonextrat.firebaseapp.com",
+  projectId: "bonextrat",
+  storageBucket: "bonextrat.firebasestorage.app",
+  messagingSenderId: "342486455356",
+  appId: "1:342486455356:web:599da94e280297858e1f39"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const TYPE_MAP = {
   salarie: { label:"Salarie",  bg:"#DBEAFE", color:"#1D4ED8" },
   auto:    { label:"Auto-Ent", bg:"#D1FAE5", color:"#065F46" },
   associe: { label:"Associe",  bg:"#FEF3C7", color:"#92400E" },
 };
-const POSTES = ["Receptionniste","Femme de chambre","Valet","Night Auditor","Concierge","Bagagiste","Room Service","Chef de reception","Agent d'accueil","Veilleur de nuit"];
+const POSTES = ["Receptionniste","Femme de chambre","Valet","Night Auditor","Concierge","Bagagiste","Room Service","Chef de reception","Agent accueil","Veilleur de nuit"];
 const COLORS_LIST = ["#2563A8","#065F46","#1C3557","#0891B2","#0369A1","#B45309","#6D28D9","#BE185D","#0F766E","#DC2626","#D97706","#0E7490","#047857"];
 const MOIS = ["Janvier","Fevrier","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Decembre"];
 const JOURS_COURT = ["L","M","M","J","V","S","D"];
 
 const INIT_INTERVENANTS = [
-  { id:1,  nom:"Gaya",    type:"salarie",  tarif:0,  color:"#2563A8", poste:"Veilleur de nuit"  },
-  { id:2,  nom:"Massi",   type:"associe",  tarif:19, color:"#065F46", poste:"Receptionniste"    },
-  { id:3,  nom:"Sina",    type:"associe",  tarif:19, color:"#1C3557", poste:"Receptionniste"    },
-  { id:4,  nom:"Youva",   type:"auto",     tarif:14, color:"#0891B2", poste:"Receptionniste"    },
-  { id:5,  nom:"Riad",    type:"auto",     tarif:14, color:"#0369A1", poste:"Receptionniste"    },
-  { id:6,  nom:"Walid",   type:"auto",     tarif:14, color:"#B45309", poste:"Receptionniste"    },
-  { id:7,  nom:"Lydia",   type:"auto",     tarif:14, color:"#6D28D9", poste:"Receptionniste"    },
-  { id:8,  nom:"Gloria",  type:"auto",     tarif:14, color:"#BE185D", poste:"Receptionniste"    },
-  { id:9,  nom:"Yaman",   type:"auto",     tarif:14, color:"#0F766E", poste:"Night Auditor"     },
-  { id:10, nom:"Rayan",   type:"auto",     tarif:14, color:"#DC2626", poste:"Receptionniste"    },
-  { id:11, nom:"Celina",  type:"auto",     tarif:14, color:"#D97706", poste:"Receptionniste"    },
-  { id:12, nom:"Sabrina", type:"auto",     tarif:14, color:"#0E7490", poste:"Receptionniste"    },
-  { id:13, nom:"Saloua",  type:"auto",     tarif:14, color:"#047857", poste:"Femme de chambre"  },
+  { id:"1",  nom:"Gaya",    type:"salarie",  tarif:0,  color:"#2563A8", poste:"Veilleur de nuit"  },
+  { id:"2",  nom:"Massi",   type:"associe",  tarif:19, color:"#065F46", poste:"Receptionniste"    },
+  { id:"3",  nom:"Sina",    type:"associe",  tarif:19, color:"#1C3557", poste:"Receptionniste"    },
+  { id:"4",  nom:"Youva",   type:"auto",     tarif:14, color:"#0891B2", poste:"Receptionniste"    },
+  { id:"5",  nom:"Riad",    type:"auto",     tarif:14, color:"#0369A1", poste:"Receptionniste"    },
+  { id:"6",  nom:"Walid",   type:"auto",     tarif:14, color:"#B45309", poste:"Receptionniste"    },
+  { id:"7",  nom:"Lydia",   type:"auto",     tarif:14, color:"#6D28D9", poste:"Receptionniste"    },
+  { id:"8",  nom:"Gloria",  type:"auto",     tarif:14, color:"#BE185D", poste:"Receptionniste"    },
+  { id:"9",  nom:"Yaman",   type:"auto",     tarif:14, color:"#0F766E", poste:"Night Auditor"     },
+  { id:"10", nom:"Rayan",   type:"auto",     tarif:14, color:"#DC2626", poste:"Receptionniste"    },
+  { id:"11", nom:"Celina",  type:"auto",     tarif:14, color:"#D97706", poste:"Receptionniste"    },
+  { id:"12", nom:"Sabrina", type:"auto",     tarif:14, color:"#0E7490", poste:"Receptionniste"    },
+  { id:"13", nom:"Saloua",  type:"auto",     tarif:14, color:"#047857", poste:"Femme de chambre"  },
 ];
 
 const INIT_HOTELS = [
-  { nom:"Hotel Bonaparte",        tarif:40, color:"#1C3557" },
-  { nom:"Hotel Bleu de Grenelle", tarif:22, color:"#2563A8" },
-  { nom:"Villa Glamour",          tarif:22, color:"#6D28D9" },
-  { nom:"Hotel Drouot",           tarif:22, color:"#0891B2" },
+  { id:"h1", nom:"Hotel Bonaparte",        tarif:40, color:"#1C3557" },
+  { id:"h2", nom:"Hotel Bleu de Grenelle", tarif:22, color:"#2563A8" },
+  { id:"h3", nom:"Villa Glamour",          tarif:22, color:"#6D28D9" },
+  { id:"h4", nom:"Hotel Drouot",           tarif:22, color:"#0891B2" },
 ];
 
-function findI(nom,arr){ return (arr||INIT_INTERVENANTS).find(i=>i.nom.toLowerCase()===nom.toLowerCase())||{id:99,nom,type:"auto",tarif:14,color:"#94A3B8",poste:"Receptionniste"}; }
+function findI(nom,arr){ return (arr||INIT_INTERVENANTS).find(i=>i.nom.toLowerCase()===nom.toLowerCase())||{id:"99",nom,type:"auto",tarif:14,color:"#94A3B8",poste:"Receptionniste"}; }
 function findH(nom,arr){
   const list=arr||INIT_HOTELS;
   const n=nom.toLowerCase();
@@ -141,18 +154,6 @@ const RAW = [
   {date:"2026-05-31",h:"Bleu de Grenelle",i:"Massi",  d:"20:30",f:"07:30"},
 ];
 
-const INIT_MISSIONS = RAW.map((r,i)=>({
-  id:i+1, date:r.date,
-  hotel: findH(r.h).nom,
-  hotelColor: findH(r.h).color,
-  intervenant: findI(r.i),
-  debut:r.d, fin:r.f,
-  heures: calcH(r.d,r.f),
-  montant: findI(r.i).tarif * calcH(r.d,r.f),
-  note:""
-}));
-
-// --- HELPERS ------------------------------------------------------
 const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#475569",marginBottom:5};
 const inp = {width:"100%",padding:"9px 11px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:12,color:"#1E293B",background:"#F8FAFC",outline:"none",boxSizing:"border-box"};
 const bP  = {padding:"10px 0",borderRadius:11,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:13,width:"100%"};
@@ -166,8 +167,8 @@ function Modal({title,onClose,children}){
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,backdropFilter:"blur(4px)",padding:14}}>
     <div style={{background:"#fff",borderRadius:18,padding:24,width:"min(96vw,440px)",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",maxHeight:"90vh",overflowY:"auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:16,color:"#1C3557",fontFamily:"Georgia,serif"}}>{title}</h2>
-        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#94A3B8"}}>x</button>
+        <h2 style={{margin:0,fontSize:16,color:"#1C3557"}}>{title}</h2>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#94A3B8"}}>X</button>
       </div>
       {children}
     </div>
@@ -175,52 +176,56 @@ function Modal({title,onClose,children}){
 }
 
 function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels}){
-  const [hotel,setHotel]=useState(existing?.hotel||prefHotel||(allHotels||INIT_HOTELS)[0].nom);
-  const [inter,setInter]=useState(existing?.intervenant||prefInter||(allIntervenants||INIT_INTERVENANTS)[0]);
+  const hotels = allHotels||INIT_HOTELS;
+  const intervenants = allIntervenants||INIT_INTERVENANTS;
+  const [hotel,setHotel]=useState(existing?.hotel||prefHotel||hotels[0].nom);
+  const [inter,setInter]=useState(existing?.intervenant||prefInter||intervenants[0]);
   const [debut,setDebut]=useState(existing?.debut||"");
   const [fin,setFin]=useState(existing?.fin||"");
   const [note,setNote]=useState(existing?.note||"");
-  const heures=calcH(debut,fin); const montant=inter.tarif*heures;
+  const heures=calcH(debut,fin);
+  const montant=inter.tarif*heures;
   const ok=debut&&fin&&heures>0;
-  return <Modal title={existing?"Modifier la mission":`Mission - ${date?.split("-").reverse().join("/")}`} onClose={onClose}>
+  return <Modal title={existing?"Modifier":"Mission - "+date} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
       <div><label style={lbl}>Hotel</label>
         <select style={inp} value={hotel} onChange={e=>setHotel(e.target.value)}>
-          {(allHotels||INIT_HOTELS).map(h=><option key={h.nom}>{h.nom}</option>)}
+          {hotels.map(h=><option key={h.nom}>{h.nom}</option>)}
         </select>
       </div>
       <div><label style={lbl}>Creneau</label>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <div><label style={{...lbl,fontSize:10,color:"#94A3B8"}}>Debut</label><input type="time" style={inp} value={debut} onChange={e=>setDebut(e.target.value)}/></div>
-          <div><label style={{...lbl,fontSize:10,color:"#94A3B8"}}>Fin</label><input type="time" style={inp} value={fin} onChange={e=>setFin(e.target.value)}/></div>
+          <div><label style={{...lbl,fontSize:10}}>Debut</label><input type="time" style={inp} value={debut} onChange={e=>setDebut(e.target.value)}/></div>
+          <div><label style={{...lbl,fontSize:10}}>Fin</label><input type="time" style={inp} value={fin} onChange={e=>setFin(e.target.value)}/></div>
         </div>
-        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {heures}h {heures!==Math.floor(heures)?`(${Math.floor(heures)}h${Math.round((heures%1)*60)}min)`:""}</div>}
+        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {heures}h</div>}
       </div>
       <div><label style={lbl}>Intervenant</label>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
-          {(allIntervenants||INIT_INTERVENANTS).map(i=><div key={i.id} onClick={()=>setInter(i)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:9,cursor:"pointer",border:"1.5px solid",borderColor:inter.id===i.id?"#1C3557":"#E2E8F0",background:inter.id===i.id?"#EBF0F8":"#F8FAFC"}}>
+          {intervenants.map(i=><div key={i.id} onClick={()=>setInter(i)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:9,cursor:"pointer",border:"1.5px solid",borderColor:inter.id===i.id?"#1C3557":"#E2E8F0",background:inter.id===i.id?"#EBF0F8":"#F8FAFC"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><Av nom={i.nom} color={i.color} size={26}/><div><div style={{fontSize:12,fontWeight:600,color:"#1E293B"}}>{i.nom}</div><div style={{fontSize:10,color:"#64748B"}}>{i.poste}</div></div></div>
-            <div style={{fontSize:11,color:"#64748B",fontWeight:600}}>{i.tarif>0?`${i.tarif}EUR/h`:"Salarie"}</div>
+            <div style={{fontSize:11,color:"#64748B",fontWeight:600}}>{i.tarif>0?i.tarif+"EUR/h":"Salarie"}</div>
           </div>)}
         </div>
       </div>
       <div><label style={lbl}>Note</label><input style={inp} placeholder="Remarque..." value={note} onChange={e=>setNote(e.target.value)}/></div>
-      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{heures}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)}EUR</span></div>}
+      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{heures}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)} EUR</span></div>}
       <div style={{display:"flex",gap:8}}>
         {existing&&<button onClick={onDelete} style={{...bS,color:"#EF4444",borderColor:"#FEE2E2",flex:1}}>Supprimer</button>}
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
-        <button disabled={!ok} onClick={()=>onSave({hotel,hotelColor:findH(hotel).color,intervenant:inter,debut,fin,heures,montant,note})} style={{...bP,flex:2,opacity:ok?1:0.4}}>Confirmer</button>
+        <button disabled={!ok} onClick={()=>onSave({hotel,hotelColor:findH(hotel,allHotels).color,intervenant:inter,debut,fin,heures,montant,note})} style={{...bP,flex:2,opacity:ok?1:0.4}}>Confirmer</button>
       </div>
     </div>
   </Modal>;
 }
 
-
-// --- MODAL AJOUT INTERVENANT --------------------------------------
 function ModalIntervenant({onClose,onSave}){
-  const [nom,setNom]=useState(""); const [type,setType]=useState("auto");
-  const [tarif,setTarif]=useState(14); const [color,setColor]=useState(COLORS_LIST[0]);
-  const [siret,setSiret]=useState(""); const [adresse,setAdresse]=useState(""); const [poste,setPoste]=useState(POSTES[0]);
+  const [nom,setNom]=useState("");
+  const [type,setType]=useState("auto");
+  const [tarif,setTarif]=useState(14);
+  const [color,setColor]=useState(COLORS_LIST[0]);
+  const [siret,setSiret]=useState("");
+  const [poste,setPoste]=useState(POSTES[0]);
   const err=!nom.trim();
   return <Modal title="Nouvel intervenant" onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:13}}>
@@ -233,357 +238,482 @@ function ModalIntervenant({onClose,onSave}){
       {type!=="salarie"&&<div><label style={lbl}>SIRET</label><input style={inp} placeholder="XXX XXX XXX" value={siret} onChange={e=>setSiret(e.target.value)}/></div>}
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
       <div style={{background:"#F8FAFC",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,border:"1px solid #E2E8F0"}}>
-        <div style={{width:34,height:34,borderRadius:"50%",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{nom.slice(0,2).toUpperCase()||"NP"}</div>
-        <div><div style={{fontWeight:600,color:"#1E293B",fontSize:12}}>{nom||"Prenom"}</div><div style={{fontSize:10,color:"#64748B"}}>{poste} - {type!=="salarie"?`${tarif}EUR/h`:"Salarie"}</div></div>
+        <div style={{width:34,height:34,borderRadius:"50%",background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>{nom.slice(0,2).toUpperCase()||"NP"}</div>
+        <div><div style={{fontWeight:600,color:"#1E293B",fontSize:12}}>{nom||"Prenom"}</div><div style={{fontSize:10,color:"#64748B"}}>{poste} - {type!=="salarie"?tarif+"EUR/h":"Salarie"}</div></div>
       </div>
-      <div style={{display:"flex",gap:8}}><button onClick={onClose} style={{...bS,flex:1}}>Annuler</button><button disabled={err} onClick={()=>onSave({id:Date.now(),nom:nom.trim(),type,tarif,color,siret,adresse,poste})} style={{...bP,flex:2,opacity:err?0.4:1}}>Ajouter</button></div>
+      <div style={{display:"flex",gap:8}}><button onClick={onClose} style={{...bS,flex:1}}>Annuler</button><button disabled={err} onClick={()=>onSave({nom:nom.trim(),type,tarif,color,siret,poste})} style={{...bP,flex:2,opacity:err?0.4:1}}>Ajouter</button></div>
     </div>
   </Modal>;
 }
 
-// --- MODAL AJOUT HOTEL --------------------------------------------
 function ModalHotel({onClose,onSave}){
-  const [nom,setNom]=useState(""); const [adresse,setAdresse]=useState("");
-  const [contact,setContact]=useState(""); const [tarif,setTarif]=useState(22);
+  const [nom,setNom]=useState("");
+  const [adresse,setAdresse]=useState("");
+  const [contact,setContact]=useState("");
+  const [tarif,setTarif]=useState(22);
   const [color,setColor]=useState(COLORS_LIST[0]);
   const err=!nom.trim();
   return <Modal title="Nouvel hotel client" onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:13}}>
-      <div><label style={lbl}>Nom de l hotel</label><input style={inp} placeholder="Hotel ..." value={nom} onChange={e=>setNom(e.target.value)}/></div>
-      <div><label style={lbl}>Adresse</label><input style={inp} placeholder="Adresse complete" value={adresse} onChange={e=>setAdresse(e.target.value)}/></div>
+      <div><label style={lbl}>Nom</label><input style={inp} placeholder="Hotel ..." value={nom} onChange={e=>setNom(e.target.value)}/></div>
+      <div><label style={lbl}>Adresse</label><input style={inp} placeholder="Adresse" value={adresse} onChange={e=>setAdresse(e.target.value)}/></div>
       <div><label style={lbl}>Contact</label><input style={inp} placeholder="Responsable" value={contact} onChange={e=>setContact(e.target.value)}/></div>
       <div><label style={lbl}>Tarif facturation (EUR/h)</label>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {[20,21,22,23,24,25,30,35,40].map(t=><button key={t} onClick={()=>setTarif(t)} style={{flex:1,minWidth:40,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:tarif===t?"#1C3557":"#E2E8F0",background:tarif===t?"#1C3557":"#F8FAFC",color:tarif===t?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>{t}EUR</button>)}
-        </div>
+        <input style={inp} type="number" min="0" step="0.01" placeholder="ex: 21.50" value={tarif} onChange={e=>setTarif(Number(e.target.value))}/>
+        <div style={{fontSize:10,color:"#94A3B8",marginTop:4}}>Saisissez le tarif librement : 21, 21.5, 22.75...</div>
       </div>
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
       <div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",border:"1px solid #BFDBFE"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:color}}/><div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{nom||"Nom hotel"}</div><div style={{fontSize:10,color:"#64748B"}}>{adresse||"Adresse"}</div></div></div>
-        <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:15}}>{tarif}EUR/h</div></div>
+        <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{nom||"Nom hotel"}</div><div style={{fontSize:10,color:"#64748B"}}>{adresse||"Adresse"}</div></div>
+        <div style={{fontWeight:700,color:"#1C3557",fontSize:15}}>{tarif} EUR/h</div>
       </div>
       <div style={{display:"flex",gap:8}}><button onClick={onClose} style={{...bS,flex:1}}>Annuler</button><button disabled={err} onClick={()=>onSave({nom:nom.trim(),adresse,contact,tarif,color})} style={{...bP,flex:2,opacity:err?0.4:1}}>Ajouter</button></div>
     </div>
   </Modal>;
 }
 
-
-// --- MODAL ENVOI PLANNING -----------------------------------------
-function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
-  const MOIS_LIST = ["Janvier","Fevrier","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Decembre"];
-  const ms = missions.filter(m=>
-    m.date.startsWith(`${year}-${String(month+1).padStart(2,"0")}`) &&
-    m.intervenant.id===inter.id
-  ).sort((a,b)=>a.date.localeCompare(b.date));
-
-  const totalH = ms.reduce((a,m)=>a+m.heures,0);
-  const totalE = ms.reduce((a,m)=>a+m.montant,0);
-
-  const [email, setEmail] = useState(inter.email||"");
-  const [copied, setCopied] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  const lignes = ms.map(m => {
-    const d = m.date.split("-").reverse().join("/");
-    const note = m.note ? " | Note : " + m.note : "";
-    return d + "  |  " + m.hotel + " | " + m.debut + " - " + m.fin + " (" + m.heures + "h)" + note;
-  }).join("\n");
-
-  const planningText = [
-    "BONEXTRAT - Planning " + MOIS_LIST[month] + " " + year,
-    "=======================================",
-    "Intervenant : " + inter.nom,
-    "Poste : " + (inter.poste||""),
-    "=======================================",
-    "",
-    lignes,
-    "",
-    "=======================================",
-    "TOTAL : " + totalH + "h" + (totalE > 0 ? " - " + totalE.toFixed(2) + "EUR HT" : ""),
-    "=======================================",
-    "",
-    "Ce planning vous a ete envoye par BONEXTRAT",
-    "185 rue Saint-Denis, 75002 Paris",
-    "bonextrat@outlook.com"
-  ].join("\n");
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(planningText).then(()=>{
-      setCopied(true);
-      setTimeout(()=>setCopied(false), 2000);
-    });
-  };
-
-  const handleWhatsapp = () => {
-    const txt = encodeURIComponent(planningText);
-    window.open(`https://wa.me/?text=${txt}`, "_blank");
-  };
-
-  const handleEmail = () => {
-    const subj = encodeURIComponent(`Votre planning Bonextrat - ${MOIS_LIST[month]} ${year}`);
-    const body = encodeURIComponent(planningText);
-    window.open(`mailto:${email}?subject=${subj}&body=${body}`, "_blank");
-    setSent(true);
-    setTimeout(()=>setSent(false), 2000);
-  };
-
-  const handleSMS = () => {
-    const txt = encodeURIComponent(planningText);
-    window.open(`sms:?body=${txt}`, "_blank");
-  };
-
-  return <Modal title={`Planning de ${inter.nom}`} onClose={onClose}>
+function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
+  const ms=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))&&m.intervenant.id===inter.id).sort((a,b)=>a.date.localeCompare(b.date));
+  const totalH=ms.reduce((a,m)=>a+m.heures,0);
+  const totalE=ms.reduce((a,m)=>a+m.montant,0);
+  const [email,setEmail]=useState(inter.email||"");
+  const [copied,setCopied]=useState(false);
+  const [showPrix,setShowPrix]=useState(false);
+  const lignes=ms.map(m=>{const d=m.date.split("-").reverse().join("/");const prix=showPrix&&m.montant>0?" - "+m.montant.toFixed(2)+" EUR":"";return d+" | "+m.hotel+" | "+m.debut+"-"+m.fin+" ("+m.heures+"h)"+prix;}).join("\n");
+  const total=showPrix?"TOTAL : "+totalH+"h"+(totalE>0?" - "+totalE.toFixed(2)+" EUR HT":""):"TOTAL : "+totalH+"h";
+  const txt=["BONEXTRAT - Planning "+MOIS[month]+" "+year,"=======================================","Intervenant : "+inter.nom,"Poste : "+(inter.poste||""),"=======================================","",lignes,"","=======================================",total,"=======================================","","bonextrat@outlook.com"].join("\n");
+  const copy=()=>{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
+  const wa=()=>window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
+  const mail=()=>window.open("mailto:"+email+"?subject=Planning Bonextrat "+MOIS[month]+" "+year+"&body="+encodeURIComponent(txt),"_blank");
+  const sms=()=>window.open("sms:?body="+encodeURIComponent(txt),"_blank");
+  return <Modal title={"Planning de "+inter.nom} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-
-      {/* Recap */}
       <div style={{background:"#F0F7FF",borderRadius:12,padding:"12px 16px",border:"1px solid #BFDBFE"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <div style={{width:36,height:36,borderRadius:"50%",background:inter.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{inter.nom.slice(0,2).toUpperCase()}</div>
-          <div>
-            <div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div>
-            <div style={{fontSize:11,color:"#64748B"}}>{inter.poste} - {MOIS_LIST[month]} {year}</div>
-          </div>
-          <div style={{marginLeft:"auto",textAlign:"right"}}>
-            <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{totalH}h</div>
-            {totalE>0&&<div style={{fontSize:11,color:"#065F46",fontWeight:600}}>{totalE.toFixed(2)}EUR</div>}
-          </div>
+          <Av nom={inter.nom} color={inter.color} size={36}/>
+          <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{MOIS[month]} {year}</div></div>
+          <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{totalH}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:160,overflowY:"auto"}}>
-          {ms.length===0
-            ? <div style={{textAlign:"center",color:"#94A3B8",fontSize:12,padding:"10px 0"}}>Aucune mission ce mois</div>
-            : ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"#fff",borderRadius:8,fontSize:11}}>
-                <div>
-                  <span style={{fontWeight:600,color:"#1E293B"}}>{m.date.split("-").reverse().join("/")}</span>
-                  <span style={{color:"#64748B"}}> - {m.hotel}</span>
-                </div>
-                <div style={{color:"#1C3557",fontWeight:600}}>{m.debut}-{m.fin} ({m.heures}h)</div>
-              </div>)
-          }
+        <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflowY:"auto"}}>
+          {ms.length===0?<div style={{color:"#94A3B8",fontSize:12,textAlign:"center"}}>Aucune mission</div>:ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fff",borderRadius:7,fontSize:11}}>
+            <span style={{fontWeight:600}}>{m.date.split("-").reverse().join("/")} - {m.hotel}</span>
+            <span style={{color:"#1C3557",fontWeight:600}}>{m.debut}-{m.fin}</span>
+          </div>)}
         </div>
       </div>
-
-      {/* Email input */}
-      <div>
-        <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:6}}>Email de {inter.nom} (optionnel)</label>
-        <input
-          style={{width:"100%",padding:"9px 11px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:12,color:"#1E293B",background:"#F8FAFC",outline:"none",boxSizing:"border-box"}}
-          placeholder="prenom@email.com"
-          value={email}
-          onChange={e=>setEmail(e.target.value)}
-        />
+      <div><label style={lbl}>Email (optionnel)</label><input style={inp} placeholder="email@exemple.com" value={email} onChange={e=>setEmail(e.target.value)}/></div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"#F8FAFC",borderRadius:10,border:"1px solid #E2E8F0"}}>
+        <div>
+          <div style={{fontSize:12,fontWeight:600,color:"#1E293B"}}>Afficher les prix dans le planning</div>
+          <div style={{fontSize:10,color:"#94A3B8",marginTop:2}}>Si desactive, seules les heures sont visibles</div>
+        </div>
+        <div onClick={()=>setShowPrix(p=>!p)} style={{width:44,height:24,borderRadius:12,background:showPrix?"#1C3557":"#D1D5DB",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
+          <div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:showPrix?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+        </div>
       </div>
-
-      {/* Boutons envoi */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <button onClick={handleWhatsapp} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:"#25D366",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>
-           WhatsApp
-        </button>
-        <button onClick={handleEmail} disabled={!email} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:sent?"#065F46":email?"#2563A8":"#94A3B8",color:"#fff",cursor:email?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>
-          {sent ? " Envoye !" : " Email"}
-        </button>
-        <button onClick={handleSMS} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:"#6D28D9",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>
-           SMS
-        </button>
-        <button onClick={handleCopy} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"1.5px solid #E2E8F0",background:copied?"#F0FDF4":"#fff",color:copied?"#065F46":"#475569",cursor:"pointer",fontWeight:600,fontSize:12}}>
-          {copied ? " Copie !" : " Copier"}
-        </button>
+        <button onClick={wa} style={{padding:"11px",borderRadius:11,border:"none",background:"#25D366",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>WhatsApp</button>
+        <button onClick={mail} disabled={!email} style={{padding:"11px",borderRadius:11,border:"none",background:email?"#2563A8":"#94A3B8",color:"#fff",cursor:email?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Email</button>
+        <button onClick={sms} style={{padding:"11px",borderRadius:11,border:"none",background:"#6D28D9",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>SMS</button>
+        <button onClick={copy} style={{padding:"11px",borderRadius:11,border:"1.5px solid #E2E8F0",background:copied?"#F0FDF4":"#fff",color:copied?"#065F46":"#475569",cursor:"pointer",fontWeight:600,fontSize:12}}>{copied?"Copie !":"Copier"}</button>
       </div>
-
-      <button onClick={onClose} style={{padding:"10px",borderRadius:11,border:"1.5px solid #E2E8F0",background:"#F8FAFC",color:"#64748B",cursor:"pointer",fontWeight:600,fontSize:12}}>Fermer</button>
+      <button onClick={onClose} style={{...bS}}>Fermer</button>
     </div>
   </Modal>;
 }
 
-// --- BLOC SHIFT ---------------------------------------------------
-function ShiftBloc({m, onClick, mode}){
-  const label = mode==="hotel" ? m.intervenant.nom : m.hotel.replace("Hotel ","");
-  const color = mode==="hotel" ? m.intervenant.color : m.hotelColor;
-  return <div onClick={()=>onClick(m)} style={{
-    background:color, color:"#fff", borderRadius:5,
-    padding:"2px 4px", marginBottom:2, cursor:"pointer",
-    fontSize:9, fontWeight:600, lineHeight:1.3,
-    whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-    boxShadow:"0 1px 3px rgba(0,0,0,0.2)",
-    userSelect:"none",
-  }}>
+function ShiftBloc({m,onClick,mode}){
+  const label=mode==="hotel"?m.intervenant.nom:m.hotel.replace("Hotel ","");
+  const color=mode==="hotel"?m.intervenant.color:m.hotelColor;
+  return <div onClick={()=>onClick(m)} style={{background:color,color:"#fff",borderRadius:5,padding:"2px 4px",marginBottom:2,cursor:"pointer",fontSize:9,fontWeight:600,lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",userSelect:"none"}}>
     <div>{label}</div>
     <div style={{fontSize:8,opacity:0.9}}>{m.debut}-{m.fin}</div>
   </div>;
 }
 
-// --- GRILLE SKELLO ------------------------------------------------
-function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, month, mode, onCellClick, onShiftClick, onSendPlanning}){
-  const days = getDays(year, month);
-  const allDays = Array.from({length:days},(_,i)=>i+1);
-
-  // Lignes selon le mode
-  const INTER_LIST = inters||INIT_INTERVENANTS;
-  const HOTEL_LIST = hotls||INIT_HOTELS;
-  const lignes = mode==="intervenant"
-    ? INTER_LIST
-    : HOTEL_LIST.map(h=>({id:h.nom, nom:h.nom, color:h.color, tarif:h.tarif}));
-
-  const today = new Date();
-  const isToday = (d) => d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
-
-  const getMissions = (ligne, day) => {
-    const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-    if(mode==="intervenant"){
-      return missions.filter(m=>m.date===dateStr && m.intervenant.id===ligne.id);
-    } else {
-      return missions.filter(m=>m.date===dateStr && m.hotel===ligne.nom);
-    }
+function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,filtreHotel,onCellClick,onShiftClick,onSendPlanning}){
+  const days=getDays(year,month);
+  const allDays=Array.from({length:days},(_,i)=>i+1);
+  const HOTEL_LIST=hotels||INIT_HOTELS;
+  const INTER_LIST=intervenants||INIT_INTERVENANTS;
+  const lignesAll=mode==="intervenant"?INTER_LIST:HOTEL_LIST.map(h=>({id:h.id||h.nom,nom:h.nom,color:h.color,tarif:h.tarif,type:"hotel"}));
+  const lignes=mode==="intervenant"?(filtreInter?lignesAll.filter(l=>l.id===filtreInter):lignesAll):(filtreHotel?lignesAll.filter(l=>l.nom===filtreHotel):lignesAll);
+  const today=new Date();
+  const isToday=d=>d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
+  const getMissions=(ligne,day)=>{
+    const dateStr=year+"-"+String(month+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    if(mode==="intervenant") return missions.filter(m=>m.date===dateStr&&m.intervenant.id===ligne.id);
+    return missions.filter(m=>m.date===dateStr&&m.hotel===ligne.nom);
   };
-
-  const getTotalH = (ligne) => {
-    const thisM = missions.filter(m=>{
-      if(mode==="intervenant") return m.intervenant.id===ligne.id;
-      return m.hotel===ligne.nom;
-    });
-    return thisM.reduce((a,m)=>a+m.heures,0);
+  const getTotalH=ligne=>{
+    const ms=missions.filter(m=>mode==="intervenant"?m.intervenant.id===ligne.id:m.hotel===ligne.nom);
+    return ms.reduce((a,m)=>a+m.heures,0);
   };
-
-  const CELL_W = 36;
-  const ROW_H = 64;
-
-  return (
-    <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E2E8F0",background:"#fff"}}>
-      <div style={{minWidth: 180 + days*CELL_W}}>
-
-        {/* HEADER jours */}
-        <div style={{display:"flex",borderBottom:"1.5px solid #E2E8F0",background:"#F8FAFC",position:"sticky",top:0,zIndex:10}}>
-          <div style={{width:180,minWidth:180,padding:"10px 14px",fontSize:11,fontWeight:700,color:"#475569",borderRight:"1px solid #E2E8F0"}}>
-            {mode==="intervenant" ? "Intervenant" : "Hotel"}
-          </div>
-          {allDays.map(d=>{
-            const fd = getFirstDay(year,month);
-            const dayOfWeek = (fd + d - 1) % 7;
-            const isWE = dayOfWeek>=5;
-            return <div key={d} style={{
-              width:CELL_W,minWidth:CELL_W,
-              padding:"4px 2px",textAlign:"center",
-              background: isToday(d)?"#1C3557": isWE?"#F1F5F9":"#F8FAFC",
-              borderRight:"1px solid #E2E8F0",
-            }}>
-              <div style={{fontSize:8,color:isToday(d)?"#93B4D4":isWE?"#94A3B8":"#94A3B8",fontWeight:600}}>{JOURS_COURT[dayOfWeek]}</div>
-              <div style={{fontSize:11,fontWeight:700,color:isToday(d)?"#fff":isWE?"#94A3B8":"#1C3557"}}>{d}</div>
-            </div>;
-          })}
-          <div style={{width:70,minWidth:70,padding:"10px 6px",fontSize:10,fontWeight:700,color:"#475569",textAlign:"center",borderLeft:"1px solid #E2E8F0"}}>Total</div>
-        </div>
-
-        {/* LIGNES */}
-        {lignes.map(ligne=>{
-          const tH = getTotalH(ligne);
-          return <div key={ligne.id||ligne.nom} style={{display:"flex",borderBottom:"1px solid #F1F5F9",minHeight:ROW_H}}>
-            {/* Label ligne */}
-            <div style={{width:180,minWidth:180,padding:"8px 12px",borderRight:"1px solid #E2E8F0",display:"flex",alignItems:"flex-start",gap:8,background:"#FAFBFC"}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:mode==="intervenant"?ligne.color:ligne.color,marginTop:5,flexShrink:0}}/>
-              <div style={{flex:1}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#1E293B"}}>{ligne.nom}</div>
-                <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:`${ligne.tarif}EUR/h`}</div>
-                {mode==="intervenant"&&<div style={{marginTop:2,display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{background:TYPE_MAP[ligne.type]?.bg,color:TYPE_MAP[ligne.type]?.color,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[ligne.type]?.label}</span>
-                  <button
-                    onClick={()=>onSendPlanning&&onSendPlanning(ligne)}
-                    title="Envoyer le planning"
-                    style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 6px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}
-                  > Envoyer</button>
-                </div>}
-              </div>
-            </div>
-
-            {/* Cellules jours */}
-            {allDays.map(d=>{
-              const fd = getFirstDay(year,month);
-              const dayOfWeek = (fd + d - 1) % 7;
-              const isWE = dayOfWeek>=5;
-              const ms = getMissions(ligne, d);
-              const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-              return <div key={d}
-                onClick={()=>ms.length===0&&onCellClick(dateStr, ligne)}
-                style={{
-                  width:CELL_W,minWidth:CELL_W,
-                  padding:"3px 2px",
-                  borderRight:"1px solid #E2E8F0",
-                  background: isToday(d)?"#EBF0F8": isWE?"#F9FAFB":"#fff",
-                  cursor:ms.length===0?"pointer":"default",
-                  verticalAlign:"top",
-                  position:"relative",
-                }}>
-                {ms.length===0 ? (
-                  <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:0}}>
-                    <div style={{width:16,height:16,borderRadius:"50%",background:"#E2E8F0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#94A3B8"}}>+</div>
-                  </div>
-                ) : ms.map(m=><ShiftBloc key={m.id} m={m} onClick={onShiftClick} mode={mode}/>)}
-                {ms.length===0&&<div className="add-hint" style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity 0.15s"}}>
-                  <div style={{width:18,height:18,borderRadius:"50%",background:"#E2E8F0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#64748B",fontWeight:300}}>+</div>
-                </div>}
-              </div>;
-            })}
-
-            {/* Total ligne */}
-            <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{tH}h</div>
-              {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*(HOTEL_LIST.find(h=>h.nom===ligne.nom)?.tarif||ligne.tarif||0)).toFixed(0)}EUR</div>}
-            </div>
+  const CELL_W=36;
+  return <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E2E8F0",background:"#fff"}}>
+    <div style={{minWidth:180+days*CELL_W}}>
+      <div style={{display:"flex",borderBottom:"1.5px solid #E2E8F0",background:"#F8FAFC",position:"sticky",top:0,zIndex:10}}>
+        <div style={{width:180,minWidth:180,padding:"10px 14px",fontSize:11,fontWeight:700,color:"#475569",borderRight:"1px solid #E2E8F0"}}>{mode==="intervenant"?"Intervenant":"Hotel"}</div>
+        {allDays.map(d=>{
+          const fd=getFirstDay(year,month);
+          const dow=(fd+d-1)%7;
+          const isWE=dow>=5;
+          return <div key={d} style={{width:CELL_W,minWidth:CELL_W,padding:"4px 2px",textAlign:"center",background:isToday(d)?"#1C3557":isWE?"#F1F5F9":"#F8FAFC",borderRight:"1px solid #E2E8F0"}}>
+            <div style={{fontSize:8,color:isToday(d)?"#93B4D4":"#94A3B8",fontWeight:600}}>{JOURS_COURT[dow]}</div>
+            <div style={{fontSize:11,fontWeight:700,color:isToday(d)?"#fff":isWE?"#94A3B8":"#1C3557"}}>{d}</div>
           </div>;
         })}
+        <div style={{width:70,minWidth:70,padding:"10px 6px",fontSize:10,fontWeight:700,color:"#475569",textAlign:"center",borderLeft:"1px solid #E2E8F0"}}>Total</div>
       </div>
+      {lignes.map(ligne=>{
+        const tH=getTotalH(ligne);
+        const tarifH=mode==="hotel"?(HOTEL_LIST.find(h=>h.nom===ligne.nom)?.tarif||0):0;
+        return <div key={ligne.id||ligne.nom} style={{display:"flex",borderBottom:"1px solid #F1F5F9",minHeight:64}}>
+          <div style={{width:180,minWidth:180,padding:"8px 12px",borderRight:"1px solid #E2E8F0",display:"flex",alignItems:"flex-start",gap:8,background:"#FAFBFC"}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:ligne.color,marginTop:5,flexShrink:0}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#1E293B"}}>{ligne.nom}</div>
+              <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:ligne.tarif+" EUR/h"}</div>
+              {mode==="intervenant"&&<div style={{marginTop:2,display:"flex",alignItems:"center",gap:4}}>
+                <span style={{background:TYPE_MAP[ligne.type]?.bg,color:TYPE_MAP[ligne.type]?.color,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[ligne.type]?.label}</span>
+                <button onClick={()=>onSendPlanning&&onSendPlanning(ligne)} style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 6px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}>Envoyer</button>
+              </div>}
+            </div>
+          </div>
+          {allDays.map(d=>{
+            const fd=getFirstDay(year,month);
+            const dow=(fd+d-1)%7;
+            const isWE=dow>=5;
+            const ms=getMissions(ligne,d);
+            const dateStr=year+"-"+String(month+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+            return <div key={d} onClick={()=>ms.length===0&&onCellClick(dateStr,ligne)} style={{width:CELL_W,minWidth:CELL_W,padding:"3px 2px",borderRight:"1px solid #E2E8F0",background:isToday(d)?"#EBF0F8":isWE?"#F9FAFB":"#fff",cursor:ms.length===0?"pointer":"default"}}>
+              {ms.map(m=><ShiftBloc key={m.id} m={m} onClick={onShiftClick} mode={mode}/>)}
+            </div>;
+          })}
+          <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{tH}h</div>
+            {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*tarifH).toFixed(0)} EUR</div>}
+          </div>
+        </div>;
+      })}
     </div>
-  );
+  </div>;
 }
 
-// --- APP ----------------------------------------------------------
+
+function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCout,statsH}){
+  const [periode,setPeriode]=useState("mois");
+  const [onglet,setOnglet]=useState("intervenants");
+
+  const MOIS_LIST=["Janv","Fevr","Mars","Avri","Mai","Juin","Juil","Aout","Sept","Octo","Nove","Dece"];
+
+  // Donnees annuelles - tous les mois de annee
+  const annee=missions.filter(m=>m.date.startsWith(year+"-"));
+  const totalHAnnee=annee.reduce((a,m)=>a+m.heures,0);
+  const totalCoutAnnee=annee.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0);
+
+  // Heures par mois pour graphe
+  const parMois=Array.from({length:12},(_,i)=>{
+    const prefix=year+"-"+String(i+1).padStart(2,"0");
+    const ms=missions.filter(m=>m.date.startsWith(prefix));
+    return {mois:MOIS_LIST[i],h:ms.reduce((a,m)=>a+m.heures,0),cout:ms.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0),nb:ms.length};
+  });
+  const maxH=Math.max(...parMois.map(m=>m.h),1);
+
+  // Par intervenant - mensuel et annuel
+  const statInter=intervenants.map(i=>{
+    const mMs=thisM.filter(m=>m.intervenant.id===i.id);
+    const aMs=annee.filter(m=>m.intervenant.id===i.id);
+    const parM=Array.from({length:12},(_,idx)=>{
+      const prefix=year+"-"+String(idx+1).padStart(2,"0");
+      return missions.filter(m=>m.date.startsWith(prefix)&&m.intervenant.id===i.id).reduce((a,m)=>a+m.heures,0);
+    });
+    return {
+      ...i,
+      hMois:mMs.reduce((a,m)=>a+m.heures,0),
+      coutMois:mMs.reduce((a,m)=>a+m.montant,0),
+      hAnnee:aMs.reduce((a,m)=>a+m.heures,0),
+      coutAnnee:aMs.reduce((a,m)=>a+m.montant,0),
+      parMois:parM,
+      nbMois:mMs.length,
+      nbAnnee:aMs.length,
+    };
+  }).filter(i=>periode==="mois"?i.hMois>0:i.hAnnee>0).sort((a,b)=>periode==="mois"?b.hMois-a.hMois:b.hAnnee-a.hAnnee);
+
+  // Par hotel - mensuel et annuel
+  const statHotel=hotels.map(h=>{
+    const mMs=thisM.filter(m=>m.hotel===h.nom);
+    const aMs=annee.filter(m=>m.hotel===h.nom);
+    const parM=Array.from({length:12},(_,idx)=>{
+      const prefix=year+"-"+String(idx+1).padStart(2,"0");
+      return missions.filter(m=>m.date.startsWith(prefix)&&m.hotel===h.nom).reduce((a,m)=>a+m.heures,0);
+    });
+    const hMois=mMs.reduce((a,m)=>a+m.heures,0);
+    const hAnnee=aMs.reduce((a,m)=>a+m.heures,0);
+    return {
+      ...h,
+      hMois,hAnnee,
+      caMois:hMois*(h.tarif||0),
+      caAnnee:hAnnee*(h.tarif||0),
+      parMois:parM,
+      nbMois:mMs.length,
+      nbAnnee:aMs.length,
+    };
+  }).filter(h=>periode==="mois"?h.hMois>0:h.hAnnee>0).sort((a,b)=>periode==="mois"?b.hMois-a.hMois:b.hAnnee-a.hAnnee);
+
+  const totalRef=periode==="mois"?totalH:totalHAnnee;
+  const coutRef=periode==="mois"?totalCout:totalCoutAnnee;
+  const nbRef=periode==="mois"?thisM.length:annee.length;
+
+  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+    {/* Toggle periode */}
+    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:4,background:"#F1F5F9",padding:4,borderRadius:10}}>
+        <button onClick={()=>setPeriode("mois")} style={{padding:"7px 18px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,background:periode==="mois"?"#fff":"transparent",color:periode==="mois"?"#1C3557":"#64748B",boxShadow:periode==="mois"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>Ce mois</button>
+        <button onClick={()=>setPeriode("annee")} style={{padding:"7px 18px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,background:periode==="annee"?"#fff":"transparent",color:periode==="annee"?"#1C3557":"#64748B",boxShadow:periode==="annee"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>Annuel {year}</button>
+      </div>
+      <div style={{display:"flex",gap:4,background:"#F1F5F9",padding:4,borderRadius:10}}>
+        <button onClick={()=>setOnglet("intervenants")} style={{padding:"7px 18px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,background:onglet==="intervenants"?"#1C3557":"transparent",color:onglet==="intervenants"?"#fff":"#64748B"}}>Intervenants</button>
+        <button onClick={()=>setOnglet("hotels")} style={{padding:"7px 18px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,background:onglet==="hotels"?"#1C3557":"transparent",color:onglet==="hotels"?"#fff":"#64748B"}}>Hotels</button>
+      </div>
+    </div>
+
+    {/* KPIs */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
+      {[
+        {l:"Missions",v:nbRef,s:periode==="mois"?"ce mois":"cette annee"},
+        {l:"Heures",v:totalRef+"h",s:"d'intervention"},
+        {l:"Cout AE",v:coutRef.toFixed(0)+" EUR",s:"HT",c:"#065F46"},
+        {l:periode==="mois"?"Hotels actifs":"Hotels",v:periode==="mois"?statsH.length:statHotel.length,s:"clients"},
+      ].map(s=><div key={s.l} style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #E2E8F0"}}>
+        <div style={{fontSize:10,color:"#94A3B8",fontWeight:600,marginBottom:6}}>{s.l}</div>
+        <div style={{fontSize:22,fontWeight:700,color:s.c||"#1C3557"}}>{s.v}</div>
+        <div style={{fontSize:11,color:"#64748B",marginTop:3}}>{s.s}</div>
+      </div>)}
+    </div>
+
+    {/* Graphe mensuel - seulement en vue annuelle */}
+    {periode==="annee"&&<div style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid #E2E8F0"}}>
+      <h3 style={{margin:"0 0 16px",fontSize:13,color:"#1C3557",fontWeight:700}}>Evolution mensuelle {year}</h3>
+      <div style={{display:"flex",alignItems:"flex-end",gap:6,height:120}}>
+        {parMois.map((m,i)=><div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+          <div style={{fontSize:9,color:"#64748B",fontWeight:600}}>{m.h>0?m.h+"h":""}</div>
+          <div style={{width:"100%",background:i===month?"#1C3557":"#BFDBFE",borderRadius:"4px 4px 0 0",height:m.h>0?Math.max(Math.round(m.h/maxH*90),4):2,transition:"height 0.3s",cursor:"pointer",position:"relative"}} title={m.mois+" : "+m.h+"h"}>
+            {i===month&&<div style={{position:"absolute",top:-18,left:"50%",transform:"translateX(-50%)",fontSize:8,color:"#1C3557",fontWeight:700,whiteSpace:"nowrap"}}>Actuel</div>}
+          </div>
+          <div style={{fontSize:9,color:i===month?"#1C3557":"#94A3B8",fontWeight:i===month?700:400}}>{m.mois}</div>
+        </div>)}
+      </div>
+    </div>}
+
+    {/* PAR INTERVENANT */}
+    {onglet==="intervenants"&&<div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden"}}>
+      <div style={{padding:"14px 18px",borderBottom:"1px solid #F1F5F9",background:"#F8FAFC",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h3 style={{margin:0,fontSize:13,color:"#1C3557",fontWeight:700}}>Heures par intervenant</h3>
+        <span style={{fontSize:11,color:"#94A3B8"}}>{periode==="mois"?"Ce mois":"Annuel "+year}</span>
+      </div>
+      {statInter.length===0&&<div style={{padding:30,textAlign:"center",color:"#94A3B8",fontSize:12}}>Aucune donnee</div>}
+      {statInter.map((i,idx)=>{
+        const h=periode==="mois"?i.hMois:i.hAnnee;
+        const cout=periode==="mois"?i.coutMois:i.coutAnnee;
+        const nb=periode==="mois"?i.nbMois:i.nbAnnee;
+        const pct=totalRef>0?Math.round(h/totalRef*100):0;
+        return <div key={i.id} style={{padding:"14px 18px",borderBottom:"1px solid #F8FAFC"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+            <Av nom={i.nom} color={i.color} size={36}/>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <span style={{fontWeight:700,color:"#1E293B",fontSize:13}}>{i.nom}</span>
+                  <span style={{marginLeft:8,background:TYPE_MAP[i.type]?.bg,color:TYPE_MAP[i.type]?.color,padding:"1px 7px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[i.type]?.label}</span>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{h}h</div>
+                  <div style={{fontSize:10,color:"#94A3B8"}}>{nb} mission(s)</div>
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                <div style={{flex:1,height:6,background:"#F1F5F9",borderRadius:99}}>
+                  <div style={{height:"100%",borderRadius:99,background:i.color,width:pct+"%",transition:"width 0.5s"}}/>
+                </div>
+                <span style={{fontSize:10,color:"#64748B",fontWeight:600,minWidth:30}}>{pct}%</span>
+              </div>
+            </div>
+          </div>
+          {cout>0&&<div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:"#F0F7FF",borderRadius:8}}>
+            <span style={{fontSize:11,color:"#475569"}}>{i.tarif} EUR/h</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#065F46"}}>{cout.toFixed(2)} EUR HT</span>
+          </div>}
+          {/* Mini graphe mensuel en vue annuelle */}
+          {periode==="annee"&&<div style={{display:"flex",alignItems:"flex-end",gap:3,height:40,marginTop:8}}>
+            {i.parMois.map((h,mi)=><div key={mi} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{width:"100%",background:mi===month?i.color:i.color+"44",borderRadius:"2px 2px 0 0",height:Math.max(h>0?Math.round(h/Math.max(...i.parMois,1)*34):0,h>0?2:0)}} title={MOIS_LIST[mi]+": "+h+"h"}/>
+              <div style={{fontSize:7,color:"#94A3B8",marginTop:1}}>{mi===month?"*":""}</div>
+            </div>)}
+          </div>}
+        </div>;
+      })}
+    </div>}
+
+    {/* PAR HOTEL */}
+    {onglet==="hotels"&&<div style={{background:"#fff",borderRadius:14,border:"1px solid #E2E8F0",overflow:"hidden"}}>
+      <div style={{padding:"14px 18px",borderBottom:"1px solid #F1F5F9",background:"#F8FAFC",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h3 style={{margin:0,fontSize:13,color:"#1C3557",fontWeight:700}}>Heures par hotel</h3>
+        <span style={{fontSize:11,color:"#94A3B8"}}>{periode==="mois"?"Ce mois":"Annuel "+year}</span>
+      </div>
+      {statHotel.length===0&&<div style={{padding:30,textAlign:"center",color:"#94A3B8",fontSize:12}}>Aucune donnee</div>}
+      {statHotel.map((h,idx)=>{
+        const nh=periode==="mois"?h.hMois:h.hAnnee;
+        const ca=periode==="mois"?h.caMois:h.caAnnee;
+        const nb=periode==="mois"?h.nbMois:h.nbAnnee;
+        const pct=totalRef>0?Math.round(nh/totalRef*100):0;
+        return <div key={h.id||h.nom} style={{padding:"14px 18px",borderBottom:"1px solid #F8FAFC"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+            <div style={{width:36,height:36,borderRadius:10,background:h.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>H</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:700,color:"#1E293B",fontSize:13}}>{h.nom}</div>
+                  <div style={{fontSize:10,color:"#64748B"}}>{h.tarif} EUR/h - {nb} mission(s)</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{nh}h</div>
+                  {ca>0&&<div style={{fontSize:11,fontWeight:700,color:"#065F46"}}>{ca.toFixed(0)} EUR</div>}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                <div style={{flex:1,height:6,background:"#F1F5F9",borderRadius:99}}>
+                  <div style={{height:"100%",borderRadius:99,background:h.color,width:pct+"%",transition:"width 0.5s"}}/>
+                </div>
+                <span style={{fontSize:10,color:"#64748B",fontWeight:600,minWidth:30}}>{pct}%</span>
+              </div>
+            </div>
+          </div>
+          {/* Mini graphe mensuel en vue annuelle */}
+          {periode==="annee"&&<div style={{display:"flex",alignItems:"flex-end",gap:3,height:40,marginTop:4}}>
+            {h.parMois.map((nh2,mi)=><div key={mi} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{width:"100%",background:mi===month?h.color:h.color+"44",borderRadius:"2px 2px 0 0",height:Math.max(nh2>0?Math.round(nh2/Math.max(...h.parMois,1)*34):0,nh2>0?2:0)}} title={MOIS_LIST[mi]+": "+nh2+"h"}/>
+              <div style={{fontSize:7,color:"#94A3B8",marginTop:1}}>{mi===month?"*":""}</div>
+            </div>)}
+          </div>}
+        </div>;
+      })}
+    </div>}
+  </div>;
+}
+
 export default function App(){
   const [year,setYear]=useState(2026);
   const [month,setMonth]=useState(4);
+  const [missions,setMissions]=useState([]);
   const [intervenants,setIntervenants]=useState(INIT_INTERVENANTS);
   const [hotels,setHotels]=useState(INIT_HOTELS);
-  const [missions,setMissions]=useState(INIT_MISSIONS);
   const [mode,setMode]=useState("intervenant");
-  const [view,setView]=useState("grille");
+  const [view,setView]=useState("planning");
   const [modal,setModal]=useState(null);
   const [modalData,setModalData]=useState(null);
   const [envoiInter,setEnvoiInter]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [filtreInter,setFiltreInter]=useState(null);
+  const [filtreHotel,setFiltreHotel]=useState(null);
+
+  // Firebase - sync missions
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"missions"),snap=>{
+      if(snap.empty){
+        // First load - seed with RAW data
+        const initial=RAW.map((r,i)=>{
+          const inter=findI(r.i,INIT_INTERVENANTS);
+          const hotel=findH(r.h,INIT_HOTELS);
+          const heures=calcH(r.d,r.f);
+          return {id:"m"+i,date:r.date,hotel:hotel.nom,hotelColor:hotel.color,intervenant:inter,debut:r.d,fin:r.f,heures,montant:inter.tarif*heures,note:""};
+        });
+        initial.forEach(m=>setDoc(doc(db,"missions",m.id),m));
+      } else {
+        setMissions(snap.docs.map(d=>({...d.data(),id:d.id})));
+      }
+      setLoading(false);
+    });
+    return ()=>unsub();
+  },[]);
+
+  // Firebase - sync intervenants
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"intervenants"),snap=>{
+      if(snap.empty){
+        INIT_INTERVENANTS.forEach(i=>setDoc(doc(db,"intervenants",i.id),i));
+      } else {
+        setIntervenants(snap.docs.map(d=>({...d.data(),id:d.id})));
+      }
+    });
+    return ()=>unsub();
+  },[]);
+
+  // Firebase - sync hotels
+  useEffect(()=>{
+    const unsub=onSnapshot(collection(db,"hotels"),snap=>{
+      if(snap.empty){
+        INIT_HOTELS.forEach(h=>setDoc(doc(db,"hotels",h.id),h));
+      } else {
+        setHotels(snap.docs.map(d=>({...d.data(),id:d.id})));
+      }
+    });
+    return ()=>unsub();
+  },[]);
 
   const prev=()=>{if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);};
   const next=()=>{if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);};
-  const thisM=missions.filter(m=>m.date.startsWith(`${year}-${String(month+1).padStart(2,"0")}`));
+  const thisM=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0")));
 
   const handleCellClick=(date,ligne)=>{
-    setModalData({
-      date,
-      prefInter: mode==="intervenant"?ligne:null,
-      prefHotel: mode==="hotel"?ligne.nom:null,
-      existing: null,
-    });
+    setModalData({date,prefInter:mode==="intervenant"?ligne:null,prefHotel:mode==="hotel"?ligne.nom:null,existing:null});
     setModal("mission");
   };
+  const handleShiftClick=m=>{setModalData({date:m.date,existing:m});setModal("mission");};
 
-  const handleShiftClick=(m)=>{
-    setModalData({date:m.date, prefInter:null, prefHotel:null, existing:m});
-    setModal("mission");
-  };
-
-  const handleSave=(data)=>{
+  const handleSave=async(data)=>{
     if(modalData?.existing){
-      setMissions(p=>p.map(m=>m.id===modalData.existing.id?{...m,...data}:m));
+      await setDoc(doc(db,"missions",modalData.existing.id),{...modalData.existing,...data});
     } else {
-      setMissions(p=>[...p,{...data,date:modalData.date,id:Date.now()}]);
+      const newDoc={...data,date:modalData.date,id:Date.now().toString()};
+      await setDoc(doc(db,"missions",newDoc.id),newDoc);
     }
     setModal(null);
   };
 
-  const handleDelete=()=>{
-    setMissions(p=>p.filter(m=>m.id!==modalData.existing.id));
+  const handleDelete=async()=>{
+    await deleteDoc(doc(db,"missions",modalData.existing.id));
     setModal(null);
+  };
+
+  const handleAddInter=async(data)=>{
+    const id=Date.now().toString();
+    await setDoc(doc(db,"intervenants",id),{...data,id});
+    setModal(null);
+  };
+
+  const handleAddHotel=async(data)=>{
+    const id=Date.now().toString();
+    await setDoc(doc(db,"hotels",id),{...data,id});
+    setModal(null);
+  };
+
+  const handleDelInter=async(id)=>{
+    if(window.confirm("Supprimer cet intervenant ?")){
+      await deleteDoc(doc(db,"intervenants",id));
+    }
+  };
+
+  const handleDelHotel=async(id)=>{
+    if(window.confirm("Supprimer cet hotel ?")){
+      await deleteDoc(doc(db,"hotels",id));
+    }
   };
 
   const totalH=thisM.reduce((a,m)=>a+m.heures,0);
   const totalCout=thisM.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0);
 
-  // FACTURES
   const factures=useMemo(()=>{
     const map={};
     thisM.forEach(m=>{
@@ -597,27 +727,30 @@ export default function App(){
     return Object.values(map).sort((a,b)=>b.total-a.total);
   },[thisM]);
 
-  // STATS hotels
-  const statsHotels=useMemo(()=>{
+  const statsH=useMemo(()=>{
     const map={};
     thisM.forEach(m=>{map[m.hotel]=(map[m.hotel]||0)+m.heures;});
     return Object.entries(map).sort((a,b)=>b[1]-a[1]);
   },[thisM]);
+  const MOIS_LIST=["Janv","Fevr","Mars","Avri","Mai","Juin","Juil","Aout","Sept","Octo","Nove","Dece"];
 
-  return <div style={{minHeight:"100vh",background:"#F0F4F8",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+  if(loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#F0F4F8",fontFamily:"system-ui"}}>
+    <div style={{textAlign:"center"}}>
+      <div style={{width:48,height:48,borderRadius:"50%",border:"4px solid #E2E8F0",borderTopColor:"#1C3557",margin:"0 auto 16px",animation:"spin 1s linear infinite"}}/>
+      <div style={{color:"#1C3557",fontWeight:600}}>Chargement Bonextrat...</div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  </div>;
 
-    {/* HEADER */}
+  return <div style={{minHeight:"100vh",background:"#F0F4F8",fontFamily:"system-ui,sans-serif"}}>
     <div style={{background:"#1C3557",boxShadow:"0 2px 16px rgba(28,53,87,0.4)"}}>
       <div style={{maxWidth:1200,margin:"0 auto",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:36,height:36,background:"#2563A8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#fff"}}>B</div>
-          <div>
-            <div style={{color:"#fff",fontWeight:700,fontSize:15,letterSpacing:"0.02em"}}>BONEXTRAT</div>
-            <div style={{color:"#93B4D4",fontSize:9}}>Planning style Skello</div>
-          </div>
+          <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Planning Skello</div></div>
         </div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {[{id:"grille",label:" Planning"},{id:"factures",label:" Factures"},{id:"stats",label:" Stats"}].map(v=>
+        <div style={{display:"flex",gap:4}}>
+          {[{id:"planning",label:"Planning"},{id:"factures",label:"Factures"},{id:"stats",label:"Stats"}].map(v=>
             <button key={v.id} onClick={()=>setView(v.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:view===v.id?"#2563A8":"rgba(255,255,255,0.1)",color:view===v.id?"#fff":"#93B4D4"}}>{v.label}</button>
           )}
         </div>
@@ -625,92 +758,54 @@ export default function App(){
     </div>
 
     <div style={{maxWidth:1200,margin:"0 auto",padding:"16px 14px"}}>
-
-      {/* BARRE NAVIGATION */}
       <div style={{background:"#fff",borderRadius:14,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1px solid #E2E8F0",marginBottom:14,flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}>{"<"}</button>
+          <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{"<"}</button>
           <div style={{textAlign:"center",minWidth:140}}>
             <div style={{fontWeight:700,fontSize:16,color:"#1C3557"}}>{MOIS[month]} {year}</div>
             <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {totalH}h</div>
           </div>
-          <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}>{">"}</button>
+          <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{">"}</button>
         </div>
-
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          {view==="grille"&&<div style={{display:"flex",gap:4,background:"#F1F5F9",padding:4,borderRadius:10}}>
-            <button onClick={()=>setMode("intervenant")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="intervenant"?"#fff":"transparent",color:mode==="intervenant"?"#1C3557":"#64748B",boxShadow:mode==="intervenant"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}> Par intervenant</button>
-            <button onClick={()=>setMode("hotel")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="hotel"?"#fff":"transparent",color:mode==="hotel"?"#1C3557":"#64748B",boxShadow:mode==="hotel"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}> Par hotel</button>
+          {view==="planning"&&<div style={{display:"flex",gap:4,background:"#F1F5F9",padding:4,borderRadius:10}}>
+            <button onClick={()=>setMode("intervenant")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="intervenant"?"#fff":"transparent",color:mode==="intervenant"?"#1C3557":"#64748B"}}>Par intervenant</button>
+            <button onClick={()=>setMode("hotel")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="hotel"?"#fff":"transparent",color:mode==="hotel"?"#1C3557":"#64748B"}}>Par hotel</button>
           </div>}
-          <button onClick={()=>setModal("intervenant")} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:10,border:"1.5px solid #1C3557",background:"#fff",color:"#1C3557",cursor:"pointer",fontWeight:600,fontSize:11}}>
-            <span style={{fontSize:14,fontWeight:300}}>+</span> Intervenant
-          </button>
-          <button onClick={()=>setModal("hotel")} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:10,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:11}}>
-            <span style={{fontSize:14,fontWeight:300}}>+</span> Hotel
-          </button>
+          <button onClick={()=>setModal("intervenant")} style={{padding:"7px 14px",borderRadius:10,border:"1.5px solid #1C3557",background:"#fff",color:"#1C3557",cursor:"pointer",fontWeight:600,fontSize:11}}>+ Intervenant</button>
+          <button onClick={()=>setModal("hotel")} style={{padding:"7px 14px",borderRadius:10,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:11}}>+ Hotel</button>
         </div>
-
-        {/* Totaux rapides */}
         <div style={{display:"flex",gap:12}}>
-          {[
-            {l:"Missions",v:thisM.length},
-            {l:"Heures",v:`${totalH}h`},
-            {l:"Cout AE",v:`${totalCout.toFixed(0)}EUR`},
-          ].map(s=><div key={s.l} style={{textAlign:"center"}}>
+          {[{l:"Missions",v:thisM.length},{l:"Heures",v:totalH+"h"},{l:"Cout AE",v:totalCout.toFixed(0)+" EUR"}].map(s=><div key={s.l} style={{textAlign:"center"}}>
             <div style={{fontSize:14,fontWeight:700,color:"#1C3557"}}>{s.v}</div>
             <div style={{fontSize:9,color:"#94A3B8"}}>{s.l}</div>
           </div>)}
         </div>
       </div>
 
-      {/* LEGENDE */}
-      {view==="grille"&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-        {(mode==="intervenant"?intervenants:hotels).map((item,idx)=><div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,background:"#fff",border:"1px solid #E2E8F0",fontSize:11,color:"#475569",position:"relative"}}>
-          <div style={{width:8,height:8,borderRadius:"50%",background:item.color}}/>
-          {item.nom}
-          {mode==="hotel"&&<button
-            onClick={()=>{
-              if(window.confirm(`Supprimer ${item.nom} ?`)){
-                setHotels(p=>p.filter((_,i)=>i!==idx));
-                setMissions(p=>p.filter(m=>m.hotel!==item.nom));
-              }
-            }}
-            style={{marginLeft:4,background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:12,padding:"0 2px",lineHeight:1}}
-          >x</button>}
-          {mode==="intervenant"&&<button
-            onClick={()=>{
-              if(window.confirm(`Supprimer ${item.nom} ?`)){
-                setIntervenants(p=>p.filter(i=>i.id!==item.id));
-                setMissions(p=>p.filter(m=>m.intervenant.id!==item.id));
-              }
-            }}
-            style={{marginLeft:4,background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:12,padding:"0 2px",lineHeight:1}}
-          >x</button>}
-        </div>)}
+      {view==="planning"&&<div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+          <button onClick={()=>mode==="intervenant"?setFiltreInter(null):setFiltreHotel(null)} style={{padding:"4px 12px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#F8FAFC",color:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>Tous</button>
+          {(mode==="intervenant"?intervenants:hotels).map(item=><button key={item.id||item.nom} onClick={()=>mode==="intervenant"?setFiltreInter(item.id===filtreInter?null:item.id):setFiltreHotel(item.nom===filtreHotel?null:item.nom)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#EBF0F8":"#fff",color:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#475569",cursor:"pointer",fontSize:11}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:item.color}}/>
+            {item.nom}
+          </button>)}
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+          {(mode==="intervenant"?intervenants:hotels).map(item=><div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:16,background:"#FEE2E2",border:"1px solid #FECACA",fontSize:10,color:"#EF4444",cursor:"pointer"}} onClick={()=>mode==="intervenant"?handleDelInter(item.id):handleDelHotel(item.id||item.nom)}>
+            {item.nom} x
+          </div>)}
+        </div>
+        <GrilleSkello missions={missions} intervenants={intervenants} hotels={hotels} year={year} month={month} mode={mode} filtreInter={filtreInter} filtreHotel={filtreHotel} onCellClick={handleCellClick} onShiftClick={handleShiftClick} onSendPlanning={i=>setEnvoiInter(i)}/>
+        <div style={{marginTop:10,fontSize:11,color:"#94A3B8",textAlign:"center"}}>Cliquez case vide pour ajouter - Cliquez shift pour modifier</div>
       </div>}
 
-      {/* GRILLE SKELLO */}
-      {view==="grille"&&<GrilleSkello
-        missions={missions}
-        intervenants={intervenants}
-        hotels={hotels}
-        year={year} month={month}
-        mode={mode}
-        onCellClick={handleCellClick}
-        onShiftClick={handleShiftClick}
-        onSendPlanning={(i)=>setEnvoiInter(i)}
-      />}
-
-      {/* FACTURES */}
       {view==="factures"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-        {factures.length===0&&<div style={{textAlign:"center",padding:60,color:"#94A3B8"}}><div style={{fontSize:48}}></div><div>Aucune facture</div></div>}
+        {factures.length===0&&<div style={{textAlign:"center",padding:60,color:"#94A3B8"}}>Aucune facture</div>}
         {factures.map(({inter,missions:ms,total,heures})=><div key={inter.id} style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid #E2E8F0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <Av nom={inter.nom} color={inter.color} size={40}/>
-              <div><div style={{fontWeight:700,color:"#1E293B",fontSize:14}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{inter.poste}</div>{inter.siret&&<div style={{fontSize:10,color:"#94A3B8"}}>SIRET: {inter.siret}</div>}</div>
-            </div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)}EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{heures}h HT</div></div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}><Av nom={inter.nom} color={inter.color} size={40}/><div><div style={{fontWeight:700,color:"#1E293B",fontSize:14}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{inter.poste}</div></div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)} EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{heures}h HT</div></div>
           </div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{borderBottom:"1.5px solid #E2E8F0"}}>{["Date","Hotel","Debut","Fin","H","Montant"].map(h=><th key={h} style={{textAlign:"left",padding:"5px 6px",color:"#64748B",fontWeight:600}}>{h}</th>)}</tr></thead>
@@ -720,89 +815,22 @@ export default function App(){
               <td style={{padding:"6px",color:"#475569"}}>{m.debut}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.fin}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.heures}h</td>
-              <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)}EUR</td>
+              <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)} EUR</td>
             </tr>)}</tbody>
           </table>
-          <div style={{marginTop:12,padding:"8px 12px",background:"#F0F7FF",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+          <div style={{marginTop:12,padding:"8px 12px",background:"#F0F7FF",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontSize:11,color:"#475569"}}>{ms.length} mission(s)</span>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setEnvoiInter(inter)} style={{padding:"6px 12px",background:"#25D366",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}> Envoyer</button>
-              <button style={{padding:"6px 12px",background:"#1C3557",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}>PDF</button>
-            </div>
+            <button onClick={()=>setEnvoiInter(inter)} style={{padding:"6px 14px",background:"#25D366",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}>Envoyer</button>
           </div>
         </div>)}
       </div>}
 
-      {/* STATS */}
-      {view==="stats"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
-          {[
-            {l:"Missions",v:thisM.length,s:"ce mois"},
-            {l:"Heures",v:`${totalH}h`,s:"d'intervention"},
-            {l:"Cout AE",v:`${totalCout.toFixed(0)}EUR`,s:"HT",c:"#065F46"},
-            {l:"Hotels",v:statsHotels.length,s:"actifs"},
-          ].map(s=><div key={s.l} style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #E2E8F0"}}>
-            <div style={{fontSize:10,color:"#94A3B8",fontWeight:600,marginBottom:6}}>{s.l}</div>
-            <div style={{fontSize:24,fontWeight:700,color:s.c||"#1C3557"}}>{s.v}</div>
-            <div style={{fontSize:11,color:"#64748B",marginTop:3}}>{s.s}</div>
-          </div>)}
-        </div>
-        <div style={{background:"#fff",borderRadius:12,padding:18,border:"1px solid #E2E8F0"}}>
-          <h3 style={{margin:"0 0 14px",fontSize:13,color:"#1C3557",fontWeight:700}}>Heures par intervenant</h3>
-          {intervenants.map(i=>{
-            const h=thisM.filter(m=>m.intervenant.id===i.id).reduce((a,m)=>a+m.heures,0);
-            if(!h)return null;
-            return <div key={i.id} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:i.color}}/><span style={{fontSize:12,color:"#475569"}}>{i.nom}</span></div>
-                <span style={{fontSize:12,fontWeight:700,color:"#1C3557"}}>{h}h</span>
-              </div>
-              <div style={{height:5,background:"#F1F5F9",borderRadius:99}}><div style={{height:"100%",borderRadius:99,background:i.color,width:`${Math.round(h/totalH*100)}%`,transition:"width 0.5s"}}/></div>
-            </div>;
-          })}
-        </div>
-        <div style={{background:"#fff",borderRadius:12,padding:18,border:"1px solid #E2E8F0"}}>
-          <h3 style={{margin:"0 0 14px",fontSize:13,color:"#1C3557",fontWeight:700}}>Heures par hotel</h3>
-          {statsHotels.map(([h,n])=>{
-          const hInfo=hotels.find(x=>x.nom===h);
-          const tarifH=hInfo?.tarif||0;
-          return <div key={h} style={{marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-              <div style={{display:"flex",flexDirection:"column"}}><span style={{fontSize:12,color:"#475569"}}>{h}</span>{tarifH>0&&<span style={{fontSize:10,color:"#065F46",fontWeight:600}}>CA: {(n*tarifH).toFixed(0)}EUR</span>}</div>
-              <span style={{fontSize:12,fontWeight:700,color:"#1C3557"}}>{n}h</span>
-            </div>
-            <div style={{height:5,background:"#F1F5F9",borderRadius:99}}><div style={{height:"100%",borderRadius:99,background:"#1C3557",width:`${Math.round(n/totalH*100)}%`}}/></div>
-          </div>;
-        })}
-        </div>
-      </div>}
-
-      {/* HINT */}
-      {view==="grille"&&<div style={{marginTop:12,fontSize:11,color:"#94A3B8",textAlign:"center"}}>
-        Cliquez sur une case vide pour ajouter - Cliquez sur un shift pour modifier
-      </div>}
+      {view==="stats"&&<StatsView missions={missions} intervenants={intervenants} hotels={hotels} year={year} month={month} thisM={thisM} totalH={totalH} totalCout={totalCout} statsH={statsH}/>}
     </div>
 
-    {/* MODAL */}
-    {envoiInter&&<ModalEnvoiPlanning
-      inter={envoiInter}
-      missions={missions}
-      year={year}
-      month={month}
-      onClose={()=>setEnvoiInter(null)}
-    />}
-    {modal==="mission"&&<ModalMission
-      date={modalData?.date}
-      prefInter={modalData?.prefInter}
-      prefHotel={modalData?.prefHotel}
-      existing={modalData?.existing}
-      allIntervenants={intervenants}
-      allHotels={hotels}
-      onClose={()=>setModal(null)}
-      onSave={handleSave}
-      onDelete={handleDelete}
-    />}
-    {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={i=>{setIntervenants(p=>[...p,i]);setModal(null);}}/>}
-    {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={h=>{setHotels(p=>[...p,h]);setModal(null);}}/>}
+    {envoiInter&&<ModalEnvoiPlanning inter={envoiInter} missions={missions} year={year} month={month} onClose={()=>setEnvoiInter(null)}/>}
+    {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
+    {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
+    {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
   </div>;
 }
