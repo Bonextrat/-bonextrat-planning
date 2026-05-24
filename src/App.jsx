@@ -272,6 +272,113 @@ function ModalHotel({onClose,onSave}){
   </Modal>;
 }
 
+
+function ModalEditIntervenant({inter, onClose, onSave, onDelete}){
+  const [nom,setNom]=useState(inter.nom);
+  const [type,setType]=useState(inter.type);
+  const [tarif,setTarif]=useState(inter.tarif);
+  const [color,setColor]=useState(inter.color);
+  const [siret,setSiret]=useState(inter.siret||"");
+  const [poste,setPoste]=useState(inter.poste||POSTES[0]);
+  const err=!nom.trim();
+  return <Modal title={"Modifier - "+inter.nom} onClose={onClose}>
+    <div style={{display:"flex",flexDirection:"column",gap:13}}>
+      <div><label style={lbl}>Nom complet</label><input style={inp} value={nom} onChange={e=>setNom(e.target.value)}/></div>
+      <div><label style={lbl}>Statut</label><div style={{display:"flex",gap:6}}>
+        {Object.entries(TYPE_MAP).map(([k,v])=><button key={k} onClick={()=>{setType(k);if(k==="salarie")setTarif(0);}} style={{flex:1,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:type===k?"#1C3557":"#E2E8F0",background:type===k?"#EBF0F8":"#F8FAFC",color:type===k?"#1C3557":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>{v.label}</button>)}
+      </div></div>
+      <div><label style={lbl}>Poste</label><select style={inp} value={poste} onChange={e=>setPoste(e.target.value)}>{POSTES.map(p=><option key={p}>{p}</option>)}</select></div>
+      {type!=="salarie"&&<div><label style={lbl}>Tarif (EUR/h)</label><input style={inp} type="number" min="0" step="0.5" value={tarif} onChange={e=>setTarif(Number(e.target.value))}/></div>}
+      {type!=="salarie"&&<div><label style={lbl}>SIRET</label><input style={inp} placeholder="XXX XXX XXX" value={siret} onChange={e=>setSiret(e.target.value)}/></div>}
+      <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <button onClick={()=>{if(window.confirm("Supprimer "+inter.nom+" ?"))onDelete(inter.id);}} style={{flex:1,padding:"10px",borderRadius:11,border:"1.5px solid #FEE2E2",background:"#FEF2F2",color:"#EF4444",cursor:"pointer",fontWeight:600,fontSize:12}}>Supprimer</button>
+        <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
+        <button disabled={err} onClick={()=>onSave(inter.id,{nom:nom.trim(),type,tarif,color,siret,poste})} style={{...bP,flex:2,opacity:err?0.4:1}}>Enregistrer</button>
+      </div>
+    </div>
+  </Modal>;
+}
+
+function ModalEditHotel({hotel, onClose, onSave, onDelete}){
+  const [nom,setNom]=useState(hotel.nom);
+  const [adresse,setAdresse]=useState(hotel.adresse||"");
+  const [contact,setContact]=useState(hotel.contact||"");
+  const [tarif,setTarif]=useState(hotel.tarif||0);
+  const [color,setColor]=useState(hotel.color||COLORS_LIST[0]);
+  const err=!nom.trim();
+  return <Modal title={"Modifier - "+hotel.nom} onClose={onClose}>
+    <div style={{display:"flex",flexDirection:"column",gap:13}}>
+      <div><label style={lbl}>Nom de l hotel</label><input style={inp} value={nom} onChange={e=>setNom(e.target.value)}/></div>
+      <div><label style={lbl}>Adresse</label><input style={inp} placeholder="Adresse" value={adresse} onChange={e=>setAdresse(e.target.value)}/></div>
+      <div><label style={lbl}>Contact</label><input style={inp} placeholder="Responsable" value={contact} onChange={e=>setContact(e.target.value)}/></div>
+      <div><label style={lbl}>Tarif facturation (EUR/h)</label>
+        <input style={inp} type="number" min="0" step="0.01" placeholder="ex: 21.50" value={tarif} onChange={e=>setTarif(Number(e.target.value))}/>
+        <div style={{fontSize:10,color:"#94A3B8",marginTop:4}}>Saisissez librement : 21, 21.5, 22.75...</div>
+      </div>
+      <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <button onClick={()=>{if(window.confirm("Supprimer "+hotel.nom+" ?"))onDelete(hotel.id||hotel.nom);}} style={{flex:1,padding:"10px",borderRadius:11,border:"1.5px solid #FEE2E2",background:"#FEF2F2",color:"#EF4444",cursor:"pointer",fontWeight:600,fontSize:12}}>Supprimer</button>
+        <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
+        <button disabled={err} onClick={()=>onSave(hotel.id||hotel.nom,{nom:nom.trim(),adresse,contact,tarif,color})} style={{...bP,flex:2,opacity:err?0.4:1}}>Enregistrer</button>
+      </div>
+    </div>
+  </Modal>;
+}
+
+function generatePDF(inter, ms, year, month, showPrix, MOIS){
+  const totalH=ms.reduce((a,m)=>a+m.heures,0);
+  const totalE=ms.reduce((a,m)=>a+m.montant,0);
+
+  const rows=ms.map(m=>{
+    const d=m.date.split("-").reverse().join("/");
+    const prix=showPrix&&m.montant>0?"<td style='padding:8px 12px;text-align:right;font-weight:600;color:#065F46;'>"+m.montant.toFixed(2)+" EUR</td>":"";
+    return "<tr style='border-bottom:1px solid #F1F5F9;'><td style='padding:8px 12px;font-weight:600;color:#1E293B;'>"+d+"</td><td style='padding:8px 12px;color:#475569;'>"+m.hotel+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.debut+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.fin+"</td><td style='padding:8px 12px;color:#1C3557;font-weight:600;text-align:center;'>"+m.heures+"h</td>"+prix+"</tr>";
+  }).join("");
+
+  const colPrix=showPrix?"<th style='padding:10px 12px;text-align:right;'>Montant</th>":"";
+  const totalRow=showPrix?"<td colspan='4'></td><td style='padding:10px 12px;text-align:center;font-weight:700;color:#1C3557;'>"+totalH+"h</td><td style='padding:10px 12px;text-align:right;font-weight:700;color:#065F46;'>"+totalE.toFixed(2)+" EUR HT</td>":"<td colspan='4'></td><td style='padding:10px 12px;text-align:center;font-weight:700;color:#1C3557;'>"+totalH+"h</td>";
+
+  const html="<!DOCTYPE html><html><head><meta charset='UTF-8'/><title>Planning "+inter.nom+"</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:system-ui,sans-serif;color:#1E293B;background:#fff;}@media print{.no-print{display:none;}}</style></head><body style='padding:0;'>"
+  +"<div style='background:#1C3557;padding:24px 32px;'>"
+  +"<div style='color:#fff;font-size:22px;font-weight:700;letter-spacing:0.05em;'>BONEXTRAT</div>"
+  +"<div style='color:#93B4D4;font-size:11px;margin-top:4px;'>185 rue Saint-Denis, 75002 Paris | bonextrat@outlook.com</div>"
+  +"</div>"
+  +"<div style='padding:24px 32px;'>"
+  +"<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #E2E8F0;'>"
+  +"<div>"
+  +"<div style='font-size:18px;font-weight:700;color:#1C3557;'>Planning "+MOIS[month]+" "+year+"</div>"
+  +"<div style='font-size:14px;color:#475569;margin-top:4px;'>"+inter.nom+" - "+inter.poste+"</div>"
+  +"</div>"
+  +"<div style='text-align:right;'>"
+  +"<div style='font-size:28px;font-weight:700;color:#1C3557;'>"+totalH+"h</div>"
+  +"<div style='font-size:11px;color:#94A3B8;'>"+ms.length+" mission(s)</div>"
+  +(showPrix&&totalE>0?"<div style='font-size:13px;font-weight:700;color:#065F46;margin-top:4px;'>"+totalE.toFixed(2)+" EUR HT</div>":"")
+  +"</div></div>"
+  +"<table style='width:100%;border-collapse:collapse;font-size:12px;'>"
+  +"<thead><tr style='background:#1C3557;color:#fff;'>"
+  +"<th style='padding:10px 12px;text-align:left;'>Date</th>"
+  +"<th style='padding:10px 12px;text-align:left;'>Hotel</th>"
+  +"<th style='padding:10px 12px;text-align:center;'>Debut</th>"
+  +"<th style='padding:10px 12px;text-align:center;'>Fin</th>"
+  +"<th style='padding:10px 12px;text-align:center;'>Heures</th>"
+  +colPrix
+  +"</tr></thead><tbody>"+rows+"</tbody>"
+  +"<tfoot><tr style='background:#F0F7FF;font-weight:700;'>"+totalRow+"</tr></tfoot>"
+  +"</table>"
+  +"<div style='margin-top:32px;padding-top:16px;border-top:1px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center;'>Document genere par BONEXTRAT - Confidentiel</div>"
+  +"</div>"
+  +"<div class='no-print' style='position:fixed;bottom:20px;right:20px;display:flex;gap:10px;'>"
+  +"<button onclick='window.print()' style='padding:12px 24px;background:#1C3557;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;'>Imprimer / Sauvegarder PDF</button>"
+  +"<button onclick='window.close()' style='padding:12px 24px;background:#F1F5F9;color:#475569;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;'>Fermer</button>"
+  +"</div>"
+  +"</body></html>";
+
+  const w=window.open("","_blank","width=900,height=700");
+  w.document.write(html);
+  w.document.close();
+}
+
 function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
   const ms=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))&&m.intervenant.id===inter.id).sort((a,b)=>a.date.localeCompare(b.date));
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
@@ -311,6 +418,9 @@ function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
           <div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:showPrix?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
         </div>
       </div>
+      <button onClick={()=>generatePDF(inter,ms,year,month,showPrix,MOIS)} style={{padding:"12px",borderRadius:11,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:13,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        Generer PDF
+      </button>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <button onClick={wa} style={{padding:"11px",borderRadius:11,border:"none",background:"#25D366",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>WhatsApp</button>
         <button onClick={mail} disabled={!email} style={{padding:"11px",borderRadius:11,border:"none",background:email?"#2563A8":"#94A3B8",color:"#fff",cursor:email?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Email</button>
@@ -617,6 +727,8 @@ export default function App(){
   const [loading,setLoading]=useState(true);
   const [filtreInter,setFiltreInter]=useState(null);
   const [filtreHotel,setFiltreHotel]=useState(null);
+  const [editInter,setEditInter]=useState(null);
+  const [editHotel,setEditHotel]=useState(null);
 
   // Firebase - sync missions
   useEffect(()=>{
@@ -697,6 +809,16 @@ export default function App(){
     const id=Date.now().toString();
     await setDoc(doc(db,"hotels",id),{...data,id});
     setModal(null);
+  };
+
+  const handleUpdateInter=async(id,data)=>{
+    await setDoc(doc(db,"intervenants",id),{...data,id});
+    setEditInter(null);
+  };
+
+  const handleUpdateHotel=async(id,data)=>{
+    await setDoc(doc(db,"hotels",id),{...data,id});
+    setEditHotel(null);
   };
 
   const handleDelInter=async(id)=>{
@@ -784,17 +906,18 @@ export default function App(){
       </div>
 
       {view==="planning"&&<div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-          <button onClick={()=>mode==="intervenant"?setFiltreInter(null):setFiltreHotel(null)} style={{padding:"4px 12px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#F8FAFC",color:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>Tous</button>
-          {(mode==="intervenant"?intervenants:hotels).map(item=><button key={item.id||item.nom} onClick={()=>mode==="intervenant"?setFiltreInter(item.id===filtreInter?null:item.id):setFiltreHotel(item.nom===filtreHotel?null:item.nom)} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#EBF0F8":"#fff",color:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#475569",cursor:"pointer",fontSize:11}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:item.color}}/>
-            {item.nom}
-          </button>)}
-        </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
-          {(mode==="intervenant"?intervenants:hotels).map(item=><div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:16,background:"#FEE2E2",border:"1px solid #FECACA",fontSize:10,color:"#EF4444",cursor:"pointer"}} onClick={()=>mode==="intervenant"?handleDelInter(item.id):handleDelHotel(item.id||item.nom)}>
-            {item.nom} x
-          </div>)}
+        {/* Filtre + Gestion */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
+          <button onClick={()=>mode==="intervenant"?setFiltreInter(null):setFiltreHotel(null)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#F8FAFC",color:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>Tous</button>
+          {(mode==="intervenant"?intervenants:hotels).map(item=>(
+            <div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:0,borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#EBF0F8":"#fff",overflow:"hidden"}}>
+              <button onClick={()=>mode==="intervenant"?setFiltreInter(item.id===filtreInter?null:item.id):setFiltreHotel(item.nom===filtreHotel?null:item.nom)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",border:"none",background:"transparent",color:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#475569",cursor:"pointer",fontSize:11}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:item.color,flexShrink:0}}/>
+                {item.nom}
+              </button>
+              <button onClick={()=>mode==="intervenant"?setEditInter(item):setEditHotel(item)} title="Modifier" style={{padding:"5px 7px",border:"none",borderLeft:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",color:"#64748B",fontSize:11}}>edit</button>
+            </div>
+          ))}
         </div>
         <GrilleSkello missions={missions} intervenants={intervenants} hotels={hotels} year={year} month={month} mode={mode} filtreInter={filtreInter} filtreHotel={filtreHotel} onCellClick={handleCellClick} onShiftClick={handleShiftClick} onSendPlanning={i=>setEnvoiInter(i)}/>
         <div style={{marginTop:10,fontSize:11,color:"#94A3B8",textAlign:"center"}}>Cliquez case vide pour ajouter - Cliquez shift pour modifier</div>
@@ -832,5 +955,7 @@ export default function App(){
     {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
+    {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
+    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(null)} onSave={handleUpdateHotel} onDelete={async(id)=>{await deleteDoc(doc(db,"hotels",id));setEditHotel(null);}}/>}
   </div>;
 }
