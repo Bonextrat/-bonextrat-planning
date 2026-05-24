@@ -326,6 +326,87 @@ function ModalEditHotel({hotel, onClose, onSave, onDelete}){
   </Modal>;
 }
 
+
+function exportExcel(missions, intervenants, hotels, year, month, MOIS){
+  const allMissions = missions.sort((a,b)=>a.date.localeCompare(b.date));
+
+  // Build CSV content with multiple sheets simulated
+  const now = new Date().toLocaleDateString("fr-FR");
+
+  // Sheet 1 - All missions
+  let csv = "BONEXTRAT - Export donnees - "+now+"\n\n";
+  csv += "=== MISSIONS ===\n";
+  csv += "Date,Hotel,Intervenant,Poste,Debut,Fin,Heures,Montant EUR,Type\n";
+  allMissions.forEach(m=>{
+    csv += [
+      m.date.split("-").reverse().join("/"),
+      '"'+m.hotel+'"',
+      '"'+m.intervenant.nom+'"',
+      '"'+(m.intervenant.poste||"")+'"',
+      m.debut,
+      m.fin,
+      m.heures,
+      m.montant.toFixed(2),
+      m.intervenant.type
+    ].join(",")+"
+";
+  });
+
+  csv += "\n=== INTERVENANTS ===\n";
+  csv += "Nom,Type,Poste,Tarif EUR/h,SIRET\n";
+  intervenants.forEach(i=>{
+    csv += ['"'+i.nom+'"',i.type,'"'+(i.poste||"")+'"',i.tarif,'"'+(i.siret||"")+'"'].join(",")+"
+";
+  });
+
+  csv += "\n=== HOTELS ===\n";
+  csv += "Nom,Tarif EUR/h,Adresse,Contact\n";
+  hotels.forEach(h=>{
+    csv += ['"'+h.nom+'"',h.tarif||0,'"'+(h.adresse||"")+'"','"'+(h.contact||"")+'"'].join(",")+"
+";
+  });
+
+  csv += "\n=== RESUME PAR INTERVENANT ===\n";
+  csv += "Intervenant,Type,Total Heures,Total Missions,Montant Total EUR\n";
+  intervenants.forEach(i=>{
+    const ms=allMissions.filter(m=>m.intervenant.id===i.id);
+    const h=ms.reduce((a,m)=>a+m.heures,0);
+    const e=ms.reduce((a,m)=>a+m.montant,0);
+    if(h>0) csv += ['"'+i.nom+'"',i.type,h,ms.length,e.toFixed(2)].join(",")+"
+";
+  });
+
+  csv += "\n=== RESUME PAR HOTEL ===\n";
+  csv += "Hotel,Tarif EUR/h,Total Heures,Total Missions,CA EUR\n";
+  hotels.forEach(h=>{
+    const ms=allMissions.filter(m=>m.hotel===h.nom);
+    const nh=ms.reduce((a,m)=>a+m.heures,0);
+    const ca=nh*(h.tarif||0);
+    if(nh>0) csv += ['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(",")+"
+";
+  });
+
+  csv += "\n=== RESUME PAR MOIS "+year+" ===\n";
+  csv += "Mois,Total Heures,Total Missions,Cout AE EUR\n";
+  MOIS.forEach((m,i)=>{
+    const prefix=year+"-"+String(i+1).padStart(2,"0");
+    const ms=allMissions.filter(m2=>m2.date.startsWith(prefix));
+    const h=ms.reduce((a,m2)=>a+m2.heures,0);
+    const e=ms.filter(m2=>m2.intervenant.type!=="salarie").reduce((a,m2)=>a+m2.montant,0);
+    if(ms.length>0) csv += ['"'+m+" "+year+'"',h,ms.length,e.toFixed(2)].join(",")+"
+";
+  });
+
+  // Download
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Bonextrat_Export_"+now.replace(/\//g,"-")+".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function generatePDF(inter, ms, year, month, showPrix, MOIS){
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
   const totalE=ms.reduce((a,m)=>a+m.montant,0);
@@ -589,6 +670,13 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
       </div>
     </div>
 
+    {/* Export Excel */}
+    <div style={{display:"flex",justifyContent:"flex-end"}}>
+      <button onClick={()=>exportExcel(missions,intervenants,hotels,year,month,MOIS)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:11,border:"1.5px solid #065F46",background:"#F0FDF4",color:"#065F46",cursor:"pointer",fontWeight:600,fontSize:12}}>
+        Exporter Excel / CSV
+      </button>
+    </div>
+
     {/* KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
       {[
@@ -678,6 +766,10 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
         const ca=periode==="mois"?h.caMois:h.caAnnee;
         const nb=periode==="mois"?h.nbMois:h.nbAnnee;
         const pct=totalRef>0?Math.round(nh/totalRef*100):0;
+        const msRef=periode==="mois"?missions.filter(m=>m.hotel===h.nom&&m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))):missions.filter(m=>m.hotel===h.nom&&m.date.startsWith(year+"-"));
+        const parPoste={};
+        msRef.forEach(m=>{const p=m.intervenant.poste||"Autre";parPoste[p]=(parPoste[p]||0)+m.heures;});
+        const postesH=Object.entries(parPoste).sort((a,b)=>b[1]-a[1]);
         return <div key={h.id||h.nom} style={{padding:"14px 18px",borderBottom:"1px solid #F8FAFC"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
             <div style={{width:36,height:36,borderRadius:10,background:h.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>H</div>
@@ -700,8 +792,19 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
               </div>
             </div>
           </div>
+          {/* Detail par poste */}
+          {postesH.length>0&&<div style={{marginTop:8,padding:"10px 12px",background:"#F8FAFC",borderRadius:10,display:"flex",flexWrap:"wrap",gap:8}}>
+            {postesH.map(([poste,heuresP])=>(
+              <div key={poste} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:"#fff",borderRadius:20,border:"1px solid #E2E8F0"}}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:h.color,flexShrink:0}}/>
+                <span style={{fontSize:11,color:"#475569"}}>{poste}</span>
+                <span style={{fontSize:11,fontWeight:700,color:"#1C3557"}}>{heuresP}h</span>
+                <span style={{fontSize:10,color:"#94A3B8"}}>({Math.round(heuresP/nh*100)}%)</span>
+              </div>
+            ))}
+          </div>}
           {/* Mini graphe mensuel en vue annuelle */}
-          {periode==="annee"&&<div style={{display:"flex",alignItems:"flex-end",gap:3,height:40,marginTop:4}}>
+          {periode==="annee"&&<div style={{display:"flex",alignItems:"flex-end",gap:3,height:40,marginTop:8}}>
             {h.parMois.map((nh2,mi)=><div key={mi} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{width:"100%",background:mi===month?h.color:h.color+"44",borderRadius:"2px 2px 0 0",height:Math.max(nh2>0?Math.round(nh2/Math.max(...h.parMois,1)*34):0,nh2>0?2:0)}} title={MOIS_LIST[mi]+": "+nh2+"h"}/>
               <div style={{fontSize:7,color:"#94A3B8",marginTop:1}}>{mi===month?"*":""}</div>
@@ -871,10 +974,11 @@ export default function App(){
           <div style={{width:36,height:36,background:"#2563A8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#fff"}}>B</div>
           <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Planning Skello</div></div>
         </div>
-        <div style={{display:"flex",gap:4}}>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
           {[{id:"planning",label:"Planning"},{id:"factures",label:"Factures"},{id:"stats",label:"Stats"}].map(v=>
             <button key={v.id} onClick={()=>setView(v.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:view===v.id?"#2563A8":"rgba(255,255,255,0.1)",color:view===v.id?"#fff":"#93B4D4"}}>{v.label}</button>
           )}
+          <button onClick={()=>exportExcel(missions,intervenants,hotels,year,month,MOIS)} title="Sauvegarder toutes les donnees en Excel" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#93B4D4",cursor:"pointer",fontWeight:600,fontSize:11}}>Export</button>
         </div>
       </div>
     </div>
