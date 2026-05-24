@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 
-// ─── DATA ─────────────────────────────────────────────────────────
+// --- DATA ---------------------------------------------------------
 const TYPE_MAP = {
   salarie: { label:"Salarie",  bg:"#DBEAFE", color:"#1D4ED8" },
   auto:    { label:"Auto-Ent", bg:"#D1FAE5", color:"#065F46" },
@@ -152,7 +152,7 @@ const INIT_MISSIONS = RAW.map((r,i)=>({
   note:""
 }));
 
-// ─── HELPERS ──────────────────────────────────────────────────────
+// --- HELPERS ------------------------------------------------------
 const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#475569",marginBottom:5};
 const inp = {width:"100%",padding:"9px 11px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:12,color:"#1E293B",background:"#F8FAFC",outline:"none",boxSizing:"border-box"};
 const bP  = {padding:"10px 0",borderRadius:11,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:13,width:"100%"};
@@ -167,7 +167,7 @@ function Modal({title,onClose,children}){
     <div style={{background:"#fff",borderRadius:18,padding:24,width:"min(96vw,440px)",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",maxHeight:"90vh",overflowY:"auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
         <h2 style={{margin:0,fontSize:16,color:"#1C3557",fontFamily:"Georgia,serif"}}>{title}</h2>
-        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#94A3B8"}}>✕</button>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#94A3B8"}}>x</button>
       </div>
       {children}
     </div>
@@ -205,7 +205,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
         </div>
       </div>
       <div><label style={lbl}>Note</label><input style={inp} placeholder="Remarque..." value={note} onChange={e=>setNote(e.target.value)}/></div>
-      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{heures}h × {inter.tarif}€/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)}€</span></div>}
+      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{heures}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)}EUR</span></div>}
       <div style={{display:"flex",gap:8}}>
         {existing&&<button onClick={onDelete} style={{...bS,color:"#EF4444",borderColor:"#FEE2E2",flex:1}}>Supprimer</button>}
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
@@ -216,7 +216,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
 }
 
 
-// ─── MODAL AJOUT INTERVENANT ──────────────────────────────────────
+// --- MODAL AJOUT INTERVENANT --------------------------------------
 function ModalIntervenant({onClose,onSave}){
   const [nom,setNom]=useState(""); const [type,setType]=useState("auto");
   const [tarif,setTarif]=useState(14); const [color,setColor]=useState(COLORS_LIST[0]);
@@ -229,7 +229,7 @@ function ModalIntervenant({onClose,onSave}){
         {Object.entries(TYPE_MAP).map(([k,v])=><button key={k} onClick={()=>{setType(k);if(k==="salarie")setTarif(0);}} style={{flex:1,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:type===k?"#1C3557":"#E2E8F0",background:type===k?"#EBF0F8":"#F8FAFC",color:type===k?"#1C3557":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>{v.label}</button>)}
       </div></div>
       <div><label style={lbl}>Poste</label><select style={inp} value={poste} onChange={e=>setPoste(e.target.value)}>{POSTES.map(p=><option key={p}>{p}</option>)}</select></div>
-      {type!=="salarie"&&<div><label style={lbl}>Tarif (€/h)</label><input style={inp} type="number" min="1" max="100" value={tarif} onChange={e=>setTarif(Number(e.target.value))}/></div>}
+      {type!=="salarie"&&<div><label style={lbl}>Tarif (EUR/h)</label><input style={inp} type="number" min="1" max="100" value={tarif} onChange={e=>setTarif(Number(e.target.value))}/></div>}
       {type!=="salarie"&&<div><label style={lbl}>SIRET</label><input style={inp} placeholder="XXX XXX XXX" value={siret} onChange={e=>setSiret(e.target.value)}/></div>}
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
       <div style={{background:"#F8FAFC",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10,border:"1px solid #E2E8F0"}}>
@@ -241,7 +241,7 @@ function ModalIntervenant({onClose,onSave}){
   </Modal>;
 }
 
-// ─── MODAL AJOUT HOTEL ────────────────────────────────────────────
+// --- MODAL AJOUT HOTEL --------------------------------------------
 function ModalHotel({onClose,onSave}){
   const [nom,setNom]=useState(""); const [adresse,setAdresse]=useState("");
   const [contact,setContact]=useState(""); const [tarif,setTarif]=useState(22);
@@ -252,15 +252,15 @@ function ModalHotel({onClose,onSave}){
       <div><label style={lbl}>Nom de l hotel</label><input style={inp} placeholder="Hotel ..." value={nom} onChange={e=>setNom(e.target.value)}/></div>
       <div><label style={lbl}>Adresse</label><input style={inp} placeholder="Adresse complete" value={adresse} onChange={e=>setAdresse(e.target.value)}/></div>
       <div><label style={lbl}>Contact</label><input style={inp} placeholder="Responsable" value={contact} onChange={e=>setContact(e.target.value)}/></div>
-      <div><label style={lbl}>Tarif facturation (€/h)</label>
+      <div><label style={lbl}>Tarif facturation (EUR/h)</label>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {[20,21,22,23,24,25,30,35,40].map(t=><button key={t} onClick={()=>setTarif(t)} style={{flex:1,minWidth:40,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:tarif===t?"#1C3557":"#E2E8F0",background:tarif===t?"#1C3557":"#F8FAFC",color:tarif===t?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>{t}€</button>)}
+          {[20,21,22,23,24,25,30,35,40].map(t=><button key={t} onClick={()=>setTarif(t)} style={{flex:1,minWidth:40,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:tarif===t?"#1C3557":"#E2E8F0",background:tarif===t?"#1C3557":"#F8FAFC",color:tarif===t?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>{t}EUR</button>)}
         </div>
       </div>
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
       <div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",border:"1px solid #BFDBFE"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:color}}/><div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{nom||"Nom hotel"}</div><div style={{fontSize:10,color:"#64748B"}}>{adresse||"Adresse"}</div></div></div>
-        <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:15}}>{tarif}€/h</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:15}}>{tarif}EUR/h</div></div>
       </div>
       <div style={{display:"flex",gap:8}}><button onClick={onClose} style={{...bS,flex:1}}>Annuler</button><button disabled={err} onClick={()=>onSave({nom:nom.trim(),adresse,contact,tarif,color})} style={{...bP,flex:2,opacity:err?0.4:1}}>Ajouter</button></div>
     </div>
@@ -268,7 +268,7 @@ function ModalHotel({onClose,onSave}){
 }
 
 
-// ─── MODAL ENVOI PLANNING ─────────────────────────────────────────
+// --- MODAL ENVOI PLANNING -----------------------------------------
 function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
   const MOIS_LIST = ["Janvier","Fevrier","Mars","Avril","Mai","Juin","Juillet","Aout","Septembre","Octobre","Novembre","Decembre"];
   const ms = missions.filter(m=>
@@ -341,11 +341,11 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
           <div style={{width:36,height:36,borderRadius:"50%",background:inter.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{inter.nom.slice(0,2).toUpperCase()}</div>
           <div>
             <div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div>
-            <div style={{fontSize:11,color:"#64748B"}}>{inter.poste} · {MOIS_LIST[month]} {year}</div>
+            <div style={{fontSize:11,color:"#64748B"}}>{inter.poste} - {MOIS_LIST[month]} {year}</div>
           </div>
           <div style={{marginLeft:"auto",textAlign:"right"}}>
             <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{totalH}h</div>
-            {totalE>0&&<div style={{fontSize:11,color:"#065F46",fontWeight:600}}>{totalE.toFixed(2)}€</div>}
+            {totalE>0&&<div style={{fontSize:11,color:"#065F46",fontWeight:600}}>{totalE.toFixed(2)}EUR</div>}
           </div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:160,overflowY:"auto"}}>
@@ -354,7 +354,7 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
             : ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 8px",background:"#fff",borderRadius:8,fontSize:11}}>
                 <div>
                   <span style={{fontWeight:600,color:"#1E293B"}}>{m.date.split("-").reverse().join("/")}</span>
-                  <span style={{color:"#64748B"}}> · {m.hotel}</span>
+                  <span style={{color:"#64748B"}}> - {m.hotel}</span>
                 </div>
                 <div style={{color:"#1C3557",fontWeight:600}}>{m.debut}-{m.fin} ({m.heures}h)</div>
               </div>)
@@ -376,16 +376,16 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
       {/* Boutons envoi */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <button onClick={handleWhatsapp} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:"#25D366",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>
-          📱 WhatsApp
+           WhatsApp
         </button>
         <button onClick={handleEmail} disabled={!email} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:sent?"#065F46":email?"#2563A8":"#94A3B8",color:"#fff",cursor:email?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>
-          {sent ? "✅ Envoye !" : "📧 Email"}
+          {sent ? " Envoye !" : " Email"}
         </button>
         <button onClick={handleSMS} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"none",background:"#6D28D9",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:12}}>
-          💬 SMS
+           SMS
         </button>
         <button onClick={handleCopy} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"11px",borderRadius:11,border:"1.5px solid #E2E8F0",background:copied?"#F0FDF4":"#fff",color:copied?"#065F46":"#475569",cursor:"pointer",fontWeight:600,fontSize:12}}>
-          {copied ? "✅ Copie !" : "📋 Copier"}
+          {copied ? " Copie !" : " Copier"}
         </button>
       </div>
 
@@ -394,7 +394,7 @@ function ModalEnvoiPlanning({inter, missions, year, month, onClose}){
   </Modal>;
 }
 
-// ─── BLOC SHIFT ───────────────────────────────────────────────────
+// --- BLOC SHIFT ---------------------------------------------------
 function ShiftBloc({m, onClick, mode}){
   const label = mode==="hotel" ? m.intervenant.nom : m.hotel.replace("Hotel ","");
   const color = mode==="hotel" ? m.intervenant.color : m.hotelColor;
@@ -411,7 +411,7 @@ function ShiftBloc({m, onClick, mode}){
   </div>;
 }
 
-// ─── GRILLE SKELLO ────────────────────────────────────────────────
+// --- GRILLE SKELLO ------------------------------------------------
 function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, month, mode, onCellClick, onShiftClick, onSendPlanning}){
   const days = getDays(year, month);
   const allDays = Array.from({length:days},(_,i)=>i+1);
@@ -488,7 +488,7 @@ function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, mont
                     onClick={()=>onSendPlanning&&onSendPlanning(ligne)}
                     title="Envoyer le planning"
                     style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 6px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}
-                  >📤 Envoyer</button>
+                  > Envoyer</button>
                 </div>}
               </div>
             </div>
@@ -525,7 +525,7 @@ function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, mont
             {/* Total ligne */}
             <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{tH}h</div>
-              {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*(HOTEL_LIST.find(h=>h.nom===ligne.nom)?.tarif||ligne.tarif||0)).toFixed(0)}€</div>}
+              {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*(HOTEL_LIST.find(h=>h.nom===ligne.nom)?.tarif||ligne.tarif||0)).toFixed(0)}EUR</div>}
             </div>
           </div>;
         })}
@@ -534,7 +534,7 @@ function GrilleSkello({missions, intervenants: inters, hotels: hotls, year, mont
   );
 }
 
-// ─── APP ──────────────────────────────────────────────────────────
+// --- APP ----------------------------------------------------------
 export default function App(){
   const [year,setYear]=useState(2026);
   const [month,setMonth]=useState(4);
@@ -617,7 +617,7 @@ export default function App(){
           </div>
         </div>
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {[{id:"grille",label:"📅 Planning"},{id:"factures",label:"🧾 Factures"},{id:"stats",label:"📊 Stats"}].map(v=>
+          {[{id:"grille",label:" Planning"},{id:"factures",label:" Factures"},{id:"stats",label:" Stats"}].map(v=>
             <button key={v.id} onClick={()=>setView(v.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:view===v.id?"#2563A8":"rgba(255,255,255,0.1)",color:view===v.id?"#fff":"#93B4D4"}}>{v.label}</button>
           )}
         </div>
@@ -629,18 +629,18 @@ export default function App(){
       {/* BARRE NAVIGATION */}
       <div style={{background:"#fff",borderRadius:14,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1px solid #E2E8F0",marginBottom:14,flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+          <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}><</button>
           <div style={{textAlign:"center",minWidth:140}}>
             <div style={{fontWeight:700,fontSize:16,color:"#1C3557"}}>{MOIS[month]} {year}</div>
-            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions · {totalH}h</div>
+            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {totalH}h</div>
           </div>
-          <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+          <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"}}>></button>
         </div>
 
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {view==="grille"&&<div style={{display:"flex",gap:4,background:"#F1F5F9",padding:4,borderRadius:10}}>
-            <button onClick={()=>setMode("intervenant")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="intervenant"?"#fff":"transparent",color:mode==="intervenant"?"#1C3557":"#64748B",boxShadow:mode==="intervenant"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>👤 Par intervenant</button>
-            <button onClick={()=>setMode("hotel")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="hotel"?"#fff":"transparent",color:mode==="hotel"?"#1C3557":"#64748B",boxShadow:mode==="hotel"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>🏨 Par hotel</button>
+            <button onClick={()=>setMode("intervenant")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="intervenant"?"#fff":"transparent",color:mode==="intervenant"?"#1C3557":"#64748B",boxShadow:mode==="intervenant"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}> Par intervenant</button>
+            <button onClick={()=>setMode("hotel")} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:mode==="hotel"?"#fff":"transparent",color:mode==="hotel"?"#1C3557":"#64748B",boxShadow:mode==="hotel"?"0 1px 4px rgba(0,0,0,0.1)":"none"}}> Par hotel</button>
           </div>}
           <button onClick={()=>setModal("intervenant")} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:10,border:"1.5px solid #1C3557",background:"#fff",color:"#1C3557",cursor:"pointer",fontWeight:600,fontSize:11}}>
             <span style={{fontSize:14,fontWeight:300}}>+</span> Intervenant
@@ -676,7 +676,7 @@ export default function App(){
               }
             }}
             style={{marginLeft:4,background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:12,padding:"0 2px",lineHeight:1}}
-          >✕</button>}
+          >x</button>}
           {mode==="intervenant"&&<button
             onClick={()=>{
               if(window.confirm(`Supprimer ${item.nom} ?`)){
@@ -685,7 +685,7 @@ export default function App(){
               }
             }}
             style={{marginLeft:4,background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:12,padding:"0 2px",lineHeight:1}}
-          >✕</button>}
+          >x</button>}
         </div>)}
       </div>}
 
@@ -703,14 +703,14 @@ export default function App(){
 
       {/* FACTURES */}
       {view==="factures"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-        {factures.length===0&&<div style={{textAlign:"center",padding:60,color:"#94A3B8"}}><div style={{fontSize:48}}>🧾</div><div>Aucune facture</div></div>}
+        {factures.length===0&&<div style={{textAlign:"center",padding:60,color:"#94A3B8"}}><div style={{fontSize:48}}></div><div>Aucune facture</div></div>}
         {factures.map(({inter,missions:ms,total,heures})=><div key={inter.id} style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid #E2E8F0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <Av nom={inter.nom} color={inter.color} size={40}/>
               <div><div style={{fontWeight:700,color:"#1E293B",fontSize:14}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{inter.poste}</div>{inter.siret&&<div style={{fontSize:10,color:"#94A3B8"}}>SIRET: {inter.siret}</div>}</div>
             </div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)}€</div><div style={{fontSize:11,color:"#94A3B8"}}>{heures}h HT</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)}EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{heures}h HT</div></div>
           </div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{borderBottom:"1.5px solid #E2E8F0"}}>{["Date","Hotel","Debut","Fin","H","Montant"].map(h=><th key={h} style={{textAlign:"left",padding:"5px 6px",color:"#64748B",fontWeight:600}}>{h}</th>)}</tr></thead>
@@ -720,13 +720,13 @@ export default function App(){
               <td style={{padding:"6px",color:"#475569"}}>{m.debut}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.fin}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.heures}h</td>
-              <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)}€</td>
+              <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)}EUR</td>
             </tr>)}</tbody>
           </table>
           <div style={{marginTop:12,padding:"8px 12px",background:"#F0F7FF",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
             <span style={{fontSize:11,color:"#475569"}}>{ms.length} mission(s)</span>
             <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setEnvoiInter(inter)} style={{padding:"6px 12px",background:"#25D366",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}>📤 Envoyer</button>
+              <button onClick={()=>setEnvoiInter(inter)} style={{padding:"6px 12px",background:"#25D366",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}> Envoyer</button>
               <button style={{padding:"6px 12px",background:"#1C3557",color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontSize:11,fontWeight:600}}>PDF</button>
             </div>
           </div>
@@ -768,17 +768,18 @@ export default function App(){
           const tarifH=hInfo?.tarif||0;
           return <div key={h} style={{marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-              <div style={{display:"flex",flexDirection:"column"}}><span style={{fontSize:12,color:"#475569"}}>{h}</span>{tarifH>0&&<span style={{fontSize:10,color:"#065F46",fontWeight:600}}>CA: {(n*tarifH).toFixed(0)}€</span>}</div>
+              <div style={{display:"flex",flexDirection:"column"}}><span style={{fontSize:12,color:"#475569"}}>{h}</span>{tarifH>0&&<span style={{fontSize:10,color:"#065F46",fontWeight:600}}>CA: {(n*tarifH).toFixed(0)}EUR</span>}</div>
               <span style={{fontSize:12,fontWeight:700,color:"#1C3557"}}>{n}h</span>
             </div>
             <div style={{height:5,background:"#F1F5F9",borderRadius:99}}><div style={{height:"100%",borderRadius:99,background:"#1C3557",width:`${Math.round(n/totalH*100)}%`}}/></div>
-          </div>)}
+          </div>;
+        })}
         </div>
       </div>}
 
       {/* HINT */}
       {view==="grille"&&<div style={{marginTop:12,fontSize:11,color:"#94A3B8",textAlign:"center"}}>
-        💡 Cliquez sur une case vide pour ajouter une mission · Cliquez sur un shift pour le modifier
+        Cliquez sur une case vide pour ajouter - Cliquez sur un shift pour modifier
       </div>}
     </div>
 
