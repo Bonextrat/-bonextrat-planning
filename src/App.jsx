@@ -767,7 +767,11 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
         const pct=totalRef>0?Math.round(nh/totalRef*100):0;
         const msRef=periode==="mois"?missions.filter(m=>m.hotel===h.nom&&m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))):missions.filter(m=>m.hotel===h.nom&&m.date.startsWith(year+"-"));
         const parPoste={};
-        msRef.forEach(m=>{const p=m.intervenant.poste||"Autre";parPoste[p]=(parPoste[p]||0)+m.heures;});
+        msRef.forEach(m=>{
+          const interLive=intervenants.find(i=>i.id===m.intervenant.id);
+          const p=(interLive?interLive.poste:m.intervenant.poste)||"Autre";
+          parPoste[p]=(parPoste[p]||0)+m.heures;
+        });
         const postesH=Object.entries(parPoste).sort((a,b)=>b[1]-a[1]);
         return <div key={h.id||h.nom} style={{padding:"14px 18px",borderBottom:"1px solid #F8FAFC"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
@@ -915,6 +919,12 @@ export default function App(){
 
   const handleUpdateInter=async(id,data)=>{
     await setDoc(doc(db,"intervenants",id),{...data,id});
+    // Update poste in all existing missions for this intervenant
+    const toUpdate=missions.filter(m=>m.intervenant.id===id);
+    await Promise.all(toUpdate.map(m=>setDoc(doc(db,"missions",m.id),{
+      ...m,
+      intervenant:{...m.intervenant,...data,id}
+    })));
     setEditInter(null);
   };
 
