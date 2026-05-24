@@ -328,17 +328,16 @@ function ModalEditHotel({hotel, onClose, onSave, onDelete}){
 
 
 function exportExcel(missions, intervenants, hotels, year, month, MOIS){
-  const allMissions = missions.sort((a,b)=>a.date.localeCompare(b.date));
-
-  // Build CSV content with multiple sheets simulated
+  const allM = missions.sort((a,b)=>a.date.localeCompare(b.date));
   const now = new Date().toLocaleDateString("fr-FR");
+  const lines = [];
 
-  // Sheet 1 - All missions
-  let csv = "BONEXTRAT - Export donnees - "+now+"\n\n";
-  csv += "=== MISSIONS ===\n";
-  csv += "Date,Hotel,Intervenant,Poste,Debut,Fin,Heures,Montant EUR,Type\n";
-  allMissions.forEach(m=>{
-    csv += [
+  lines.push("BONEXTRAT - Export donnees - "+now);
+  lines.push("");
+  lines.push("=== MISSIONS ===");
+  lines.push("Date,Hotel,Intervenant,Poste,Debut,Fin,Heures,Montant EUR,Type");
+  allM.forEach(m=>{
+    lines.push([
       m.date.split("-").reverse().join("/"),
       '"'+m.hotel+'"',
       '"'+m.intervenant.nom+'"',
@@ -348,55 +347,55 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
       m.heures,
       m.montant.toFixed(2),
       m.intervenant.type
-    ].join(",")+"\n";
+    ].join(","));
   });
 
-  csv += "\n=== INTERVENANTS ===\n";
-  csv += "Nom,Type,Poste,Tarif EUR/h,SIRET\n";
+  lines.push("");
+  lines.push("=== INTERVENANTS ===");
+  lines.push("Nom,Type,Poste,Tarif EUR/h,SIRET");
   intervenants.forEach(i=>{
-    csv += ['"'+i.nom+'"',i.type,'"'+(i.poste||"")+'"',i.tarif,'"'+(i.siret||"")+'"'].join(",")+"\n"+
-";
+    lines.push(['"'+i.nom+'"',i.type,'"'+(i.poste||"")+'"',i.tarif,'"'+(i.siret||"")+'"'].join(","));
   });
 
-  csv += "\n=== HOTELS ===\n";
-  csv += "Nom,Tarif EUR/h,Adresse,Contact\n";
+  lines.push("");
+  lines.push("=== HOTELS ===");
+  lines.push("Nom,Tarif EUR/h,Adresse,Contact");
   hotels.forEach(h=>{
-    csv += ['"'+h.nom+'"',h.tarif||0,'"'+(h.adresse||"")+'"','"'+(h.contact||"")+'"'].join(",")+"\n"+
-";
+    lines.push(['"'+h.nom+'"',h.tarif||0,'"'+(h.adresse||"")+'"','"'+(h.contact||"")+'"'].join(","));
   });
 
-  csv += "\n=== RESUME PAR INTERVENANT ===\n";
-  csv += "Intervenant,Type,Total Heures,Total Missions,Montant Total EUR\n";
+  lines.push("");
+  lines.push("=== RESUME PAR INTERVENANT ===");
+  lines.push("Intervenant,Type,Total Heures,Total Missions,Montant Total EUR");
   intervenants.forEach(i=>{
-    const ms=allMissions.filter(m=>m.intervenant.id===i.id);
+    const ms=allM.filter(m=>m.intervenant.id===i.id);
     const h=ms.reduce((a,m)=>a+m.heures,0);
     const e=ms.reduce((a,m)=>a+m.montant,0);
-    if(h>0) csv += ['"'+i.nom+'"',i.type,h,ms.length,e.toFixed(2)].join(",")+"\n"+
-";
+    if(h>0) lines.push(['"'+i.nom+'"',i.type,h,ms.length,e.toFixed(2)].join(","));
   });
 
-  csv += "\n=== RESUME PAR HOTEL ===\n";
-  csv += "Hotel,Tarif EUR/h,Total Heures,Total Missions,CA EUR\n";
+  lines.push("");
+  lines.push("=== RESUME PAR HOTEL ===");
+  lines.push("Hotel,Tarif EUR/h,Total Heures,Total Missions,CA EUR");
   hotels.forEach(h=>{
-    const ms=allMissions.filter(m=>m.hotel===h.nom);
+    const ms=allM.filter(m=>m.hotel===h.nom);
     const nh=ms.reduce((a,m)=>a+m.heures,0);
     const ca=nh*(h.tarif||0);
-    if(nh>0) csv += ['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(",")+"\n"+
-";
+    if(nh>0) lines.push(['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(","));
   });
 
-  csv += "\n=== RESUME PAR MOIS "+year+" ===\n";
-  csv += "Mois,Total Heures,Total Missions,Cout AE EUR\n";
+  lines.push("");
+  lines.push("=== RESUME PAR MOIS "+year+" ===");
+  lines.push("Mois,Total Heures,Total Missions,Cout AE EUR");
   MOIS.forEach((m,i)=>{
     const prefix=year+"-"+String(i+1).padStart(2,"0");
-    const ms=allMissions.filter(m2=>m2.date.startsWith(prefix));
+    const ms=allM.filter(m2=>m2.date.startsWith(prefix));
     const h=ms.reduce((a,m2)=>a+m2.heures,0);
     const e=ms.filter(m2=>m2.intervenant.type!=="salarie").reduce((a,m2)=>a+m2.montant,0);
-    if(ms.length>0) csv += ['"'+m+" "+year+'"',h,ms.length,e.toFixed(2)].join(",")+"\n"+
-";
+    if(ms.length>0) lines.push(['"'+m+" "+year+'"',h,ms.length,e.toFixed(2)].join(","));
   });
 
-  // Download
+  const csv = lines.join("\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -405,6 +404,7 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
   a.click();
   URL.revokeObjectURL(url);
 }
+
 
 function generatePDF(inter, ms, year, month, showPrix, MOIS){
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
