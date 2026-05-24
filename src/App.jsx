@@ -175,8 +175,8 @@ function Modal({title,onClose,children}){
 }
 
 function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels}){
-  const [hotel,setHotel]=useState(existing?.hotel||prefHotel||HOTELS[0].nom);
-  const [inter,setInter]=useState(existing?.intervenant||prefInter||INTERVENANTS[0]);
+  const [hotel,setHotel]=useState(existing?.hotel||prefHotel||(allHotels||INIT_HOTELS)[0].nom);
+  const [inter,setInter]=useState(existing?.intervenant||prefInter||(allIntervenants||INIT_INTERVENANTS)[0]);
   const [debut,setDebut]=useState(existing?.debut||"");
   const [fin,setFin]=useState(existing?.fin||"");
   const [note,setNote]=useState(existing?.note||"");
