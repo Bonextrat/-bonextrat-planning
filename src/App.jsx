@@ -16,6 +16,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+function round(n){ return Math.round(n*100)/100; }
+function roundH(n){ return Math.round(n*10)/10; }
+
 const TYPE_MAP = {
   salarie: { label:"Salarie",  bg:"#DBEAFE", color:"#1D4ED8" },
   auto:    { label:"Auto-Ent", bg:"#D1FAE5", color:"#065F46" },
@@ -61,7 +64,7 @@ function findH(nom,arr){
 }
 
 function toMins(t){ if(!t)return 0; const[h,m]=t.split(":").map(Number); return h*60+m; }
-function calcH(d,f){ if(!d||!f)return 0; let x=toMins(f)-toMins(d); if(x<=0)x+=1440; return Math.round(x/6)/10; }
+function calcH(d,f){ if(!d||!f)return 0; let x=toMins(f)-toMins(d); if(x<=0)x+=1440; return Math.round(x/60*10)/10; }
 function getDays(y,m){ return new Date(y,m+1,0).getDate(); }
 function getFirstDay(y,m){ return (new Date(y,m,1).getDay()+6)%7; }
 
@@ -186,7 +189,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
   const [fin,setFin]=useState(existing?.fin||"");
   const [note,setNote]=useState(existing?.note||"");
   const heures=calcH(debut,fin);
-  const montant=inter.tarif*heures;
+  const montant=round(inter.tarif*heures);
   const ok=debut&&fin&&heures>0;
   return <Modal title={existing?"Modifier":"Mission - "+date} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -200,7 +203,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
           <div><label style={{...lbl,fontSize:10}}>Debut</label><input type="time" style={inp} value={debut} onChange={e=>setDebut(e.target.value)}/></div>
           <div><label style={{...lbl,fontSize:10}}>Fin</label><input type="time" style={inp} value={fin} onChange={e=>setFin(e.target.value)}/></div>
         </div>
-        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {heures}h</div>}
+        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {roundH(heures)}h</div>}
       </div>
       <div><label style={lbl}>Intervenant</label>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
@@ -211,7 +214,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
         </div>
       </div>
       <div><label style={lbl}>Note</label><input style={inp} placeholder="Remarque..." value={note} onChange={e=>setNote(e.target.value)}/></div>
-      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{heures}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)} EUR</span></div>}
+      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{roundH(heures)}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)} EUR</span></div>}
       <div style={{display:"flex",gap:8}}>
         {existing&&<button onClick={onDelete} style={{...bS,color:"#EF4444",borderColor:"#FEE2E2",flex:1}}>Supprimer</button>}
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
@@ -408,6 +411,160 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
 }
 
 
+
+function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
+  const prefix = year+"-"+String(month+1).padStart(2,"0");
+  const ms = missions.filter(m=>m.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
+  const totalH = Math.round(ms.reduce((a,m)=>a+m.heures,0)*10)/10;
+  const totalCout = Math.round(ms.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0)*100)/100;
+  const now = new Date().toLocaleDateString("fr-FR");
+
+  // Resume par intervenant
+  const byInter = {};
+  ms.forEach(m=>{
+    if(m.intervenant.type==="salarie") return;
+    const k=m.intervenant.id;
+    if(!byInter[k]) byInter[k]={nom:m.intervenant.nom,poste:m.intervenant.poste,tarif:m.intervenant.tarif,h:0,montant:0,missions:[]};
+    byInter[k].h = Math.round((byInter[k].h+m.heures)*10)/10;
+    byInter[k].montant = Math.round((byInter[k].montant+m.montant)*100)/100;
+    byInter[k].missions.push(m);
+  });
+
+  // Resume par hotel
+  const byHotel = {};
+  ms.forEach(m=>{
+    if(!byHotel[m.hotel]) byHotel[m.hotel]={h:0,nb:0};
+    byHotel[m.hotel].h = Math.round((byHotel[m.hotel].h+m.heures)*10)/10;
+    byHotel[m.hotel].nb++;
+  });
+
+  const rowsMissions = ms.map(m=>`
+    <tr>
+      <td>${m.date.split("-").reverse().join("/")}</td>
+      <td>${m.hotel}</td>
+      <td>${m.intervenant.nom}</td>
+      <td>${m.intervenant.poste||""}</td>
+      <td style="text-align:center">${m.debut}</td>
+      <td style="text-align:center">${m.fin}</td>
+      <td style="text-align:center;font-weight:600">${Math.round(m.heures*10)/10}h</td>
+    </tr>`).join("");
+
+  const rowsInter = Object.values(byInter).sort((a,b)=>b.h-a.h).map(i=>`
+    <tr>
+      <td style="font-weight:600">${i.nom}</td>
+      <td>${i.poste||""}</td>
+      <td style="text-align:center">${i.missions.length}</td>
+      <td style="text-align:center;font-weight:700;color:#1C3557">${i.h}h</td>
+      <td style="text-align:right;font-weight:700;color:#065F46">${i.montant.toFixed(2)} EUR HT</td>
+    </tr>`).join("");
+
+  const rowsHotel = Object.entries(byHotel).sort((a,b)=>b[1].h-a[1].h).map(([nom,d])=>{
+    const hInfo=hotels.find(h=>h.nom===nom);
+    const tarif=hInfo?.tarif||0;
+    const ca=Math.round(d.h*tarif*100)/100;
+    return `<tr>
+      <td style="font-weight:600">${nom}</td>
+      <td style="text-align:center">${d.nb}</td>
+      <td style="text-align:center;font-weight:700;color:#1C3557">${d.h}h</td>
+      <td style="text-align:center">${tarif} EUR/h</td>
+      <td style="text-align:right;font-weight:700;color:#065F46">${ca > 0 ? ca.toFixed(2)+" EUR" : "-"}</td>
+    </tr>`;}).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<title>Bonextrat - Rapport ${MOIS[month]} ${year}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui,sans-serif; color:#1E293B; font-size:12px; }
+  .header { background:#1C3557; color:#fff; padding:24px 32px; display:flex; justify-content:space-between; align-items:center; }
+  .header-left h1 { font-size:22px; font-weight:700; letter-spacing:0.05em; }
+  .header-left p { color:#93B4D4; font-size:11px; margin-top:4px; }
+  .header-right { text-align:right; }
+  .header-right .mois { font-size:18px; font-weight:700; }
+  .header-right .date { font-size:10px; color:#93B4D4; margin-top:2px; }
+  .content { padding:24px 32px; }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .kpi { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; }
+  .kpi-label { font-size:10px; color:#94A3B8; font-weight:600; margin-bottom:4px; }
+  .kpi-value { font-size:20px; font-weight:700; color:#1C3557; }
+  .section { margin-bottom:24px; }
+  .section h2 { font-size:13px; font-weight:700; color:#1C3557; margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid #1C3557; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  thead tr { background:#1C3557; color:#fff; }
+  th { padding:8px 10px; text-align:left; font-weight:600; font-size:11px; }
+  td { padding:7px 10px; border-bottom:1px solid #F1F5F9; }
+  tr:nth-child(even) td { background:#F8FAFC; }
+  .footer { margin-top:32px; padding-top:14px; border-top:1px solid #E2E8F0; font-size:10px; color:#94A3B8; text-align:center; }
+  .no-print { position:fixed; bottom:20px; right:20px; display:flex; gap:10px; }
+  .btn { padding:12px 24px; border:none; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; }
+  @media print { .no-print { display:none; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>BONEXTRAT</h1>
+      <p>185 rue Saint-Denis, 75002 Paris | bonextrat@outlook.com</p>
+      <p style="margin-top:2px">SIRET: 980 707 632</p>
+    </div>
+    <div class="header-right">
+      <div class="mois">Rapport ${MOIS[month]} ${year}</div>
+      <div class="date">Genere le ${now}</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">MISSIONS</div><div class="kpi-value">${ms.length}</div></div>
+      <div class="kpi"><div class="kpi-label">HEURES TOTALES</div><div class="kpi-value">${totalH}h</div></div>
+      <div class="kpi"><div class="kpi-label">COUT AE HT</div><div class="kpi-value" style="color:#065F46">${totalCout.toFixed(2)} EUR</div></div>
+      <div class="kpi"><div class="kpi-label">HOTELS ACTIFS</div><div class="kpi-value">${Object.keys(byHotel).length}</div></div>
+    </div>
+
+    <div class="section">
+      <h2>Detail de toutes les missions</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Hotel</th><th>Intervenant</th><th>Poste</th><th>Debut</th><th>Fin</th><th>Heures</th></tr></thead>
+        <tbody>${rowsMissions}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Recapitulatif par intervenant</h2>
+      <table>
+        <thead><tr><th>Nom</th><th>Poste</th><th>Missions</th><th>Heures</th><th style="text-align:right">Montant HT</th></tr></thead>
+        <tbody>${rowsInter}</tbody>
+        <tfoot><tr style="background:#EBF0F8;font-weight:700"><td colspan="3">TOTAL</td><td style="text-align:center;color:#1C3557">${totalH}h</td><td style="text-align:right;color:#065F46">${totalCout.toFixed(2)} EUR HT</td></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Recapitulatif par hotel client</h2>
+      <table>
+        <thead><tr><th>Hotel</th><th>Missions</th><th>Heures</th><th>Tarif</th><th style="text-align:right">CA HT</th></tr></thead>
+        <tbody>${rowsHotel}</tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Document confidentiel - Bonextrat SAS - ${now}
+    </div>
+  </div>
+
+  <div class="no-print">
+    <button class="btn" onclick="window.print()" style="background:#1C3557;color:#fff">Imprimer / Sauvegarder PDF</button>
+    <button class="btn" onclick="window.close()" style="background:#F1F5F9;color:#475569">Fermer</button>
+  </div>
+</body>
+</html>`;
+
+  const w = window.open("","_blank","width=1000,height=800");
+  w.document.write(html);
+  w.document.close();
+}
+
 function generatePDF(inter, ms, year, month, showPrix, MOIS){
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
   const totalE=ms.reduce((a,m)=>a+m.montant,0);
@@ -481,7 +638,7 @@ function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
           <Av nom={inter.nom} color={inter.color} size={36}/>
           <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{MOIS[month]} {year}</div></div>
-          <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{totalH}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
+          <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(totalH)}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflowY:"auto"}}>
           {ms.length===0?<div style={{color:"#94A3B8",fontSize:12,textAlign:"center"}}>Aucune mission</div>:ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fff",borderRadius:7,fontSize:11}}>
@@ -583,7 +740,7 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
             </div>;
           })}
           <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{tH}h</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{roundH(tH)}h</div>
             {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*tarifH).toFixed(0)} EUR</div>}
           </div>
         </div>;
@@ -728,7 +885,7 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
                   <span style={{marginLeft:8,background:TYPE_MAP[i.type]?.bg,color:TYPE_MAP[i.type]?.color,padding:"1px 7px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[i.type]?.label}</span>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{h}h</div>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(h)}h</div>
                   <div style={{fontSize:10,color:"#94A3B8"}}>{nb} mission(s)</div>
                 </div>
               </div>
@@ -785,7 +942,7 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
                   <div style={{fontSize:10,color:"#64748B"}}>{h.tarif} EUR/h - {nb} mission(s)</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{nh}h</div>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(nh)}h</div>
                   {ca>0&&<div style={{fontSize:11,fontWeight:700,color:"#065F46"}}>{ca.toFixed(0)} EUR</div>}
                 </div>
               </div>
@@ -946,7 +1103,7 @@ export default function App(){
           const inter=findI(r.i,INIT_INTERVENANTS);
           const hotel=findH(r.h,INIT_HOTELS);
           const heures=calcH(r.d,r.f);
-          return {id:"m"+i,date:r.date,hotel:hotel.nom,hotelColor:hotel.color,intervenant:inter,debut:r.d,fin:r.f,heures,montant:inter.tarif*heures,note:""};
+          return {id:"m"+i,date:r.date,hotel:hotel.nom,hotelColor:hotel.color,intervenant:inter,debut:r.d,fin:r.f,heures,montant:round(inter.tarif*heures),note:""};
         });
         initial.forEach(m=>setDoc(doc(db,"missions",m.id),m));
       } else {
@@ -998,7 +1155,7 @@ export default function App(){
     if(modalData?.existing){
       await setDoc(doc(db,"missions",modalData.existing.id),{...modalData.existing,...data});
     } else {
-      const newDoc={...data,date:modalData.date,id:Date.now().toString()};
+      const newDoc={...data,date:modalData.date,id:Date.now().toString(),montant:round(data.heures*(data.intervenant?.tarif||0))};
       await setDoc(doc(db,"missions",newDoc.id),newDoc);
     }
     setModal(null);
@@ -1101,7 +1258,7 @@ export default function App(){
           {[{id:"planning",label:"Planning"},{id:"factures",label:"Factures"},{id:"stats",label:"Stats"}].map(v=>
             <button key={v.id} onClick={()=>setView(v.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:view===v.id?"#2563A8":"rgba(255,255,255,0.1)",color:view===v.id?"#fff":"#93B4D4"}}>{v.label}</button>
           )}
-          <button onClick={()=>exportExcel(missions,intervenants,hotels,year,month,MOIS)} title="Sauvegarder toutes les donnees en Excel" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#93B4D4",cursor:"pointer",fontWeight:600,fontSize:11}}>Export</button>
+          <button onClick={()=>exportPDFMensuel(missions,intervenants,hotels,year,month,MOIS)} title="Exporter le rapport PDF du mois" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#93B4D4",cursor:"pointer",fontWeight:600,fontSize:11}}>PDF Mensuel</button>
           <button onClick={()=>signOut(auth)} title="Se deconnecter" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.15)",color:"#FCA5A5",cursor:"pointer",fontWeight:600,fontSize:11}}>Quitter</button>
         </div>
       </div>
@@ -1113,7 +1270,7 @@ export default function App(){
           <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{"<"}</button>
           <div style={{textAlign:"center",minWidth:140}}>
             <div style={{fontWeight:700,fontSize:16,color:"#1C3557"}}>{MOIS[month]} {year}</div>
-            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {totalH}h</div>
+            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {roundH(totalH)}h</div>
           </div>
           <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{">"}</button>
         </div>
@@ -1156,7 +1313,7 @@ export default function App(){
         {factures.map(({inter,missions:ms,total,heures})=><div key={inter.id} style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid #E2E8F0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}><Av nom={inter.nom} color={inter.color} size={40}/><div><div style={{fontWeight:700,color:"#1E293B",fontSize:14}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{inter.poste}</div></div></div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)} EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{heures}h HT</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)} EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{roundH(heures)}h HT</div></div>
           </div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{borderBottom:"1.5px solid #E2E8F0"}}>{["Date","Hotel","Debut","Fin","H","Montant"].map(h=><th key={h} style={{textAlign:"left",padding:"5px 6px",color:"#64748B",fontWeight:600}}>{h}</th>)}</tr></thead>
@@ -1165,7 +1322,7 @@ export default function App(){
               <td style={{padding:"6px",color:"#475569"}}>{m.hotel}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.debut}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.fin}</td>
-              <td style={{padding:"6px",color:"#475569"}}>{m.heures}h</td>
+              <td style={{padding:"6px",color:"#475569"}}>{roundH(m.heures)}h</td>
               <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)} EUR</td>
             </tr>)}</tbody>
           </table>
