@@ -837,7 +837,8 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
     return missions.filter(m=>m.date===dateStr&&m.hotel===ligne.nom);
   };
   const getTotalH=ligne=>{
-    const ms=missions.filter(m=>mode==="intervenant"?m.intervenant.id===ligne.id:m.hotel===ligne.nom);
+    const prefix=year+"-"+String(month+1).padStart(2,"0");
+    const ms=missions.filter(m=>m.date.startsWith(prefix)&&(mode==="intervenant"?m.intervenant.id===ligne.id:m.hotel===ligne.nom));
     return Math.round(ms.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
   };
   const CELL_W=36;
