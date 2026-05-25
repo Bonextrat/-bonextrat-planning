@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBGSuQYfId3GAtymM0S11mnxVlrIk0CHA4",
@@ -13,6 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 const TYPE_MAP = {
   salarie: { label:"Salarie",  bg:"#DBEAFE", color:"#1D4ED8" },
@@ -819,6 +821,95 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
   </div>;
 }
 
+
+function LoginScreen({onLogin}){
+  const [email,setEmail]=useState("bonextrat@outlook.com");
+  const [password,setPassword]=useState("");
+  const [remember,setRemember]=useState(true);
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  const handleLogin=async()=>{
+    if(!password){setError("Entrez votre mot de passe");return;}
+    setLoading(true);
+    setError("");
+    try{
+      const persistence=remember?browserLocalPersistence:browserSessionPersistence;
+      await setPersistence(auth,persistence);
+      await signInWithEmailAndPassword(auth,email,password);
+      onLogin();
+    }catch(e){
+      if(e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"){
+        setError("Mot de passe incorrect");
+      } else if(e.code==="auth/user-not-found"){
+        setError("Email introuvable");
+      } else {
+        setError("Erreur de connexion");
+      }
+      setLoading(false);
+    }
+  };
+
+  return <div style={{minHeight:"100vh",background:"#1C3557",display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"system-ui,sans-serif"}}>
+    <div style={{background:"#fff",borderRadius:20,padding:32,width:"min(96vw,400px)",boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <img src="/logo_192.png" alt="Bonextrat" style={{width:80,height:80,borderRadius:16,marginBottom:12,objectFit:"contain",background:"#1C3557",padding:8}}/>
+        <div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>BONEXTRAT</div>
+        <div style={{fontSize:13,color:"#94A3B8",marginTop:4}}>Planning & Facturation</div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div>
+          <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:6}}>Email</label>
+          <input
+            style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px solid #E2E8F0",fontSize:13,color:"#1E293B",background:"#F8FAFC",outline:"none",boxSizing:"border-box"}}
+            type="email"
+            value={email}
+            onChange={e=>setEmail(e.target.value)}
+            placeholder="email@bonextrat.com"
+          />
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:6}}>Mot de passe</label>
+          <input
+            style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px solid #E2E8F0",fontSize:13,color:"#1E293B",background:"#F8FAFC",outline:"none",boxSizing:"border-box"}}
+            type="password"
+            value={password}
+            onChange={e=>setPassword(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+            placeholder="Mot de passe"
+          />
+        </div>
+
+        {/* Se souvenir de moi */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"#F8FAFC",borderRadius:10,border:"1px solid #E2E8F0"}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:"#1E293B"}}>Se souvenir de moi</div>
+            <div style={{fontSize:10,color:"#94A3B8",marginTop:1}}>Rester connecte sur cet appareil</div>
+          </div>
+          <div onClick={()=>setRemember(r=>!r)} style={{width:44,height:24,borderRadius:12,background:remember?"#1C3557":"#D1D5DB",cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
+            <div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:remember?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+          </div>
+        </div>
+
+        {error&&<div style={{padding:"10px 14px",background:"#FEF2F2",borderRadius:10,border:"1px solid #FECACA",fontSize:12,color:"#EF4444",fontWeight:600}}>{error}</div>}
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{padding:"13px",borderRadius:12,border:"none",background:loading?"#94A3B8":"#1C3557",color:"#fff",cursor:loading?"not-allowed":"pointer",fontWeight:700,fontSize:14,marginTop:4}}
+        >
+          {loading?"Connexion...":"Se connecter"}
+        </button>
+      </div>
+
+      <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#94A3B8"}}>
+        Bonextrat SAS - 185 rue Saint-Denis, 75002 Paris
+      </div>
+    </div>
+  </div>;
+}
+
 export default function App(){
   const [year,setYear]=useState(2026);
   const [month,setMonth]=useState(4);
@@ -835,6 +926,16 @@ export default function App(){
   const [filtreHotel,setFiltreHotel]=useState(null);
   const [editInter,setEditInter]=useState(null);
   const [editHotel,setEditHotel]=useState(null);
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+
+  useEffect(()=>{
+    const unsub=onAuthStateChanged(auth,u=>{
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return ()=>unsub();
+  },[]);
 
   // Firebase - sync missions
   useEffect(()=>{
@@ -968,10 +1069,20 @@ export default function App(){
   },[thisM]);
   const MOIS_LIST=["Janv","Fevr","Mars","Avri","Mai","Juin","Juil","Aout","Sept","Octo","Nove","Dece"];
 
-  if(loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#F0F4F8",fontFamily:"system-ui"}}>
+  if(authLoading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1C3557"}}>
     <div style={{textAlign:"center"}}>
-      <div style={{width:48,height:48,borderRadius:"50%",border:"4px solid #E2E8F0",borderTopColor:"#1C3557",margin:"0 auto 16px",animation:"spin 1s linear infinite"}}/>
-      <div style={{color:"#1C3557",fontWeight:600}}>Chargement Bonextrat...</div>
+      <img src="/logo_192.png" alt="Bonextrat" style={{width:80,height:80,borderRadius:16,marginBottom:16,objectFit:"contain"}}/>
+      <div style={{color:"#93B4D4",fontSize:13}}>Chargement...</div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  </div>;
+
+  if(!user) return <LoginScreen onLogin={()=>setUser(auth.currentUser)}/>;
+
+  if(loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#1C3557",fontFamily:"system-ui"}}>
+    <div style={{textAlign:"center"}}>
+      <div style={{width:48,height:48,borderRadius:"50%",border:"4px solid rgba(255,255,255,0.2)",borderTopColor:"#fff",margin:"0 auto 16px",animation:"spin 1s linear infinite"}}/>
+      <div style={{color:"#93B4D4",fontWeight:600}}>Chargement des donnees...</div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   </div>;
@@ -980,14 +1091,15 @@ export default function App(){
     <div style={{background:"#1C3557",boxShadow:"0 2px 16px rgba(28,53,87,0.4)"}}>
       <div style={{maxWidth:1200,margin:"0 auto",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <img src="/logo_192.png" alt="Bonextrat" style={{width:44,height:44,borderRadius:10,objectFit:"contain"}}/>
+          <div style={{width:36,height:36,background:"#2563A8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#fff"}}>B</div>
           <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Planning Skello</div></div>
         </div>
-        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+        <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
           {[{id:"planning",label:"Planning"},{id:"factures",label:"Factures"},{id:"stats",label:"Stats"}].map(v=>
             <button key={v.id} onClick={()=>setView(v.id)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:600,fontSize:11,background:view===v.id?"#2563A8":"rgba(255,255,255,0.1)",color:view===v.id?"#fff":"#93B4D4"}}>{v.label}</button>
           )}
           <button onClick={()=>exportExcel(missions,intervenants,hotels,year,month,MOIS)} title="Sauvegarder toutes les donnees en Excel" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(255,255,255,0.1)",color:"#93B4D4",cursor:"pointer",fontWeight:600,fontSize:11}}>Export</button>
+          <button onClick={()=>signOut(auth)} title="Se deconnecter" style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.15)",color:"#FCA5A5",cursor:"pointer",fontWeight:600,fontSize:11}}>Quitter</button>
         </div>
       </div>
     </div>
