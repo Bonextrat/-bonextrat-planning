@@ -703,7 +703,7 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
   };
   const getTotalH=ligne=>{
     const ms=missions.filter(m=>mode==="intervenant"?m.intervenant.id===ligne.id:m.hotel===ligne.nom);
-    return ms.reduce((a,m)=>a+m.heures,0);
+    return Math.round(ms.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
   };
   const CELL_W=36;
   return <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E2E8F0",background:"#fff"}}>
@@ -765,8 +765,8 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
 
   // Donnees annuelles - tous les mois de annee
   const annee=missions.filter(m=>m.date.startsWith(year+"-"));
-  const totalHAnnee=annee.reduce((a,m)=>a+m.heures,0);
-  const totalCoutAnnee=annee.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0);
+  const totalHAnnee=Math.round(annee.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
+  const totalCoutAnnee=Math.round(annee.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+(calcH(m.debut,m.fin)*m.intervenant.tarif),0)*100)/100;
 
   // Heures par mois pour graphe
   const parMois=Array.from({length:12},(_,i)=>{
@@ -782,14 +782,14 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
     const aMs=annee.filter(m=>m.intervenant.id===i.id);
     const parM=Array.from({length:12},(_,idx)=>{
       const prefix=year+"-"+String(idx+1).padStart(2,"0");
-      return missions.filter(m=>m.date.startsWith(prefix)&&m.intervenant.id===i.id).reduce((a,m)=>a+m.heures,0);
+      return Math.round(missions.filter(m=>m.date.startsWith(prefix)&&m.intervenant.id===i.id).reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
     });
     return {
       ...i,
-      hMois:mMs.reduce((a,m)=>a+m.heures,0),
-      coutMois:mMs.reduce((a,m)=>a+m.montant,0),
-      hAnnee:aMs.reduce((a,m)=>a+m.heures,0),
-      coutAnnee:aMs.reduce((a,m)=>a+m.montant,0),
+      hMois:Math.round(mMs.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4,
+      coutMois:Math.round(mMs.reduce((a,m)=>a+(calcH(m.debut,m.fin)*m.intervenant.tarif),0)*100)/100,
+      hAnnee:Math.round(aMs.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4,
+      coutAnnee:Math.round(aMs.reduce((a,m)=>a+(calcH(m.debut,m.fin)*m.intervenant.tarif),0)*100)/100,
       parMois:parM,
       nbMois:mMs.length,
       nbAnnee:aMs.length,
@@ -802,10 +802,10 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
     const aMs=annee.filter(m=>m.hotel===h.nom);
     const parM=Array.from({length:12},(_,idx)=>{
       const prefix=year+"-"+String(idx+1).padStart(2,"0");
-      return missions.filter(m=>m.date.startsWith(prefix)&&m.hotel===h.nom).reduce((a,m)=>a+m.heures,0);
+      return Math.round(missions.filter(m=>m.date.startsWith(prefix)&&m.hotel===h.nom).reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
     });
-    const hMois=mMs.reduce((a,m)=>a+m.heures,0);
-    const hAnnee=aMs.reduce((a,m)=>a+m.heures,0);
+    const hMois=Math.round(mMs.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
+    const hAnnee=Math.round(aMs.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
     return {
       ...h,
       hMois,hAnnee,
@@ -1213,8 +1213,8 @@ export default function App(){
     }
   };
 
-  const totalH=thisM.reduce((a,m)=>a+m.heures,0);
-  const totalCout=thisM.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0);
+  const totalH=Math.round(thisM.reduce((a,m)=>a+calcH(m.debut,m.fin),0)*4)/4;
+  const totalCout=Math.round(thisM.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+(calcH(m.debut,m.fin)*m.intervenant.tarif),0)*100)/100;
 
   const factures=useMemo(()=>{
     const map={};
@@ -1231,7 +1231,7 @@ export default function App(){
 
   const statsH=useMemo(()=>{
     const map={};
-    thisM.forEach(m=>{map[m.hotel]=(map[m.hotel]||0)+m.heures;});
+    thisM.forEach(m=>{map[m.hotel]=Math.round(((map[m.hotel]||0)+calcH(m.debut,m.fin))*4)/4;});
     return Object.entries(map).sort((a,b)=>b[1]-a[1]);
   },[thisM]);
   const MOIS_LIST=["Janv","Fevr","Mars","Avri","Mai","Juin","Juil","Aout","Sept","Octo","Nove","Dece"];
