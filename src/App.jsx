@@ -17,7 +17,12 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 function round(n){ return Math.round(n*100)/100; }
-function roundH(n){ return Math.round(n*10)/10; }
+function roundH(n){ return Math.round(n*4)/4; }
+function dispH(h){
+  if(!h||h===0) return "0h";
+  const clean = Math.round(h*4)/4;
+  return clean % 1 === 0 ? clean+"h" : clean+"h";
+}
 
 const TYPE_MAP = {
   salarie: { label:"Salarie",  bg:"#DBEAFE", color:"#1D4ED8" },
@@ -64,7 +69,7 @@ function findH(nom,arr){
 }
 
 function toMins(t){ if(!t)return 0; const[h,m]=t.split(":").map(Number); return h*60+m; }
-function calcH(d,f){ if(!d||!f)return 0; let x=toMins(f)-toMins(d); if(x<=0)x+=1440; return Math.round(x/60*10)/10; }
+function calcH(d,f){ if(!d||!f)return 0; let x=toMins(f)-toMins(d); if(x<=0)x+=1440; return Math.round(x/60*4)/4; }
 function getDays(y,m){ return new Date(y,m+1,0).getDate(); }
 function getFirstDay(y,m){ return (new Date(y,m,1).getDay()+6)%7; }
 
@@ -203,7 +208,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
           <div><label style={{...lbl,fontSize:10}}>Debut</label><input type="time" style={inp} value={debut} onChange={e=>setDebut(e.target.value)}/></div>
           <div><label style={{...lbl,fontSize:10}}>Fin</label><input type="time" style={inp} value={fin} onChange={e=>setFin(e.target.value)}/></div>
         </div>
-        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {roundH(heures)}h</div>}
+        {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>Duree : {Math.round(heures*4)/4}h</div>}
       </div>
       <div><label style={lbl}>Intervenant</label>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:180,overflowY:"auto"}}>
@@ -214,7 +219,7 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
         </div>
       </div>
       <div><label style={lbl}>Note</label><input style={inp} placeholder="Remarque..." value={note} onChange={e=>setNote(e.target.value)}/></div>
-      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{roundH(heures)}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)} EUR</span></div>}
+      {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}><span style={{color:"#475569",fontSize:12}}>{Math.round(heures*4)/4}h x {inter.tarif}EUR/h</span><span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{montant.toFixed(2)} EUR</span></div>}
       <div style={{display:"flex",gap:8}}>
         {existing&&<button onClick={onDelete} style={{...bS,color:"#EF4444",borderColor:"#FEE2E2",flex:1}}>Supprimer</button>}
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
@@ -415,7 +420,9 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
 function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
   const prefix = year+"-"+String(month+1).padStart(2,"0");
   const ms = missions.filter(m=>m.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
-  const totalH = Math.round(ms.reduce((a,m)=>a+m.heures,0)*10)/10;
+  const totalHNum = Math.round(ms.reduce((a,m)=>a+m.heures,0)*10)/10;
+  function fmtH(h){ const hrs=Math.floor(h); const mins=Math.round((h-hrs)*60); return mins===0?hrs+"h":hrs+"h"+String(mins).padStart(2,"0"); }
+  const totalH = fmtH(totalHNum);
   const totalCout = Math.round(ms.filter(m=>m.intervenant.type!=="salarie").reduce((a,m)=>a+m.montant,0)*100)/100;
   const now = new Date().toLocaleDateString("fr-FR");
 
@@ -518,7 +525,7 @@ function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
   <div class="content">
     <div class="kpis">
       <div class="kpi"><div class="kpi-label">MISSIONS</div><div class="kpi-value">${ms.length}</div></div>
-      <div class="kpi"><div class="kpi-label">HEURES TOTALES</div><div class="kpi-value">${totalH}h</div></div>
+      <div class="kpi"><div class="kpi-label">HEURES TOTALES</div><div class="kpi-value">${totalH}</div></div>
       <div class="kpi"><div class="kpi-label">COUT AE HT</div><div class="kpi-value" style="color:#065F46">${totalCout.toFixed(2)} EUR</div></div>
       <div class="kpi"><div class="kpi-label">HOTELS ACTIFS</div><div class="kpi-value">${Object.keys(byHotel).length}</div></div>
     </div>
@@ -536,7 +543,7 @@ function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
       <table>
         <thead><tr><th>Nom</th><th>Poste</th><th>Missions</th><th>Heures</th><th style="text-align:right">Montant HT</th></tr></thead>
         <tbody>${rowsInter}</tbody>
-        <tfoot><tr style="background:#EBF0F8;font-weight:700"><td colspan="3">TOTAL</td><td style="text-align:center;color:#1C3557">${totalH}h</td><td style="text-align:right;color:#065F46">${totalCout.toFixed(2)} EUR HT</td></tr></tfoot>
+        <tfoot><tr style="background:#EBF0F8;font-weight:700"><td colspan="3">TOTAL</td><td style="text-align:center;color:#1C3557">${totalH}</td><td style="text-align:right;color:#065F46">${totalCout.toFixed(2)} EUR HT</td></tr></tfoot>
       </table>
     </div>
 
@@ -638,7 +645,7 @@ function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
           <Av nom={inter.nom} color={inter.color} size={36}/>
           <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{MOIS[month]} {year}</div></div>
-          <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(totalH)}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
+          <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{Math.round(totalH*4)/4}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflowY:"auto"}}>
           {ms.length===0?<div style={{color:"#94A3B8",fontSize:12,textAlign:"center"}}>Aucune mission</div>:ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fff",borderRadius:7,fontSize:11}}>
@@ -740,7 +747,7 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
             </div>;
           })}
           <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{roundH(tH)}h</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1C3557"}}>{Math.round(tH*4)/4}h</div>
             {mode==="hotel"&&tH>0&&<div style={{fontSize:9,color:"#065F46",fontWeight:600}}>{(tH*tarifH).toFixed(0)} EUR</div>}
           </div>
         </div>;
@@ -885,7 +892,7 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
                   <span style={{marginLeft:8,background:TYPE_MAP[i.type]?.bg,color:TYPE_MAP[i.type]?.color,padding:"1px 7px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[i.type]?.label}</span>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(h)}h</div>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{Math.round(h*4)/4}h</div>
                   <div style={{fontSize:10,color:"#94A3B8"}}>{nb} mission(s)</div>
                 </div>
               </div>
@@ -942,7 +949,7 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
                   <div style={{fontSize:10,color:"#64748B"}}>{h.tarif} EUR/h - {nb} mission(s)</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{roundH(nh)}h</div>
+                  <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{Math.round(nh*4)/4}h</div>
                   {ca>0&&<div style={{fontSize:11,fontWeight:700,color:"#065F46"}}>{ca.toFixed(0)} EUR</div>}
                 </div>
               </div>
@@ -1270,7 +1277,7 @@ export default function App(){
           <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{"<"}</button>
           <div style={{textAlign:"center",minWidth:140}}>
             <div style={{fontWeight:700,fontSize:16,color:"#1C3557"}}>{MOIS[month]} {year}</div>
-            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {roundH(totalH)}h</div>
+            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {Math.round(totalH*4)/4}h</div>
           </div>
           <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{">"}</button>
         </div>
@@ -1313,7 +1320,7 @@ export default function App(){
         {factures.map(({inter,missions:ms,total,heures})=><div key={inter.id} style={{background:"#fff",borderRadius:14,padding:20,border:"1px solid #E2E8F0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}><Av nom={inter.nom} color={inter.color} size={40}/><div><div style={{fontWeight:700,color:"#1E293B",fontSize:14}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{inter.poste}</div></div></div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)} EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{roundH(heures)}h HT</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:700,color:"#1C3557"}}>{total.toFixed(2)} EUR</div><div style={{fontSize:11,color:"#94A3B8"}}>{Math.round(heures*4)/4}h HT</div></div>
           </div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{borderBottom:"1.5px solid #E2E8F0"}}>{["Date","Hotel","Debut","Fin","H","Montant"].map(h=><th key={h} style={{textAlign:"left",padding:"5px 6px",color:"#64748B",fontWeight:600}}>{h}</th>)}</tr></thead>
@@ -1322,7 +1329,7 @@ export default function App(){
               <td style={{padding:"6px",color:"#475569"}}>{m.hotel}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.debut}</td>
               <td style={{padding:"6px",color:"#475569"}}>{m.fin}</td>
-              <td style={{padding:"6px",color:"#475569"}}>{roundH(m.heures)}h</td>
+              <td style={{padding:"6px",color:"#475569"}}>{Math.round(m.heures*4)/4}h</td>
               <td style={{padding:"6px",fontWeight:600,color:"#1C3557"}}>{m.montant.toFixed(2)} EUR</td>
             </tr>)}</tbody>
           </table>
