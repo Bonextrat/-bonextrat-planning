@@ -1293,14 +1293,19 @@ export default function App(){
   };
   const handleShiftClick=m=>{setModalData({date:m.date,existing:m});setModal("mission");};
 
-  const handleSave=async(data)=>{
+  const handleSave=async(data,isMulti=false)=>{
     if(modalData?.existing){
       await setDoc(doc(db,"missions",modalData.existing.id),{...modalData.existing,...data});
+      setModal(null);
     } else {
-      const newDoc={...data,date:modalData.date,id:Date.now().toString(),montant:round(data.heures*(data.intervenant?.tarif||0))};
+      // Si isMulti, la date vient de data.date (passee par dupliquer/recurrence)
+      // Sinon on prend modalData.date
+      const dateToUse = isMulti && data.date ? data.date : modalData.date;
+      const id = Date.now().toString() + (isMulti ? "-"+dateToUse+"-"+Math.random().toString(36).slice(2,6) : "");
+      const newDoc={...data, date:dateToUse, id, montant:round(calcH(data.debut,data.fin)*(data.intervenant?.tarif||0))};
       await setDoc(doc(db,"missions",newDoc.id),newDoc);
+      if(!isMulti) setModal(null);
     }
-    setModal(null);
   };
 
   const handleDelete=async()=>{
