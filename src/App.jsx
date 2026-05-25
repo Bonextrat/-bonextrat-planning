@@ -877,8 +877,18 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
             const isWE=dow>=5;
             const ms=getMissions(ligne,d);
             const dateStr=year+"-"+String(month+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-            return <div key={d} onClick={()=>ms.length===0&&onCellClick(dateStr,ligne)} style={{width:CELL_W,minWidth:CELL_W,padding:"3px 2px",borderRight:"1px solid #E2E8F0",background:isToday(d)?"#EBF0F8":isWE?"#F9FAFB":"#fff",cursor:ms.length===0?"pointer":"default"}}>
+            return <div key={d} style={{width:CELL_W,minWidth:CELL_W,padding:"3px 2px",borderRight:"1px solid #E2E8F0",background:isToday(d)?"#EBF0F8":isWE?"#F9FAFB":"#fff",position:"relative"}}>
               {ms.map(m=><ShiftBloc key={m.id} m={m} onClick={onShiftClick} mode={mode}/>)}
+              <div onClick={()=>onCellClick(dateStr,ligne)} style={{
+                position:"absolute",bottom:1,right:1,
+                width:14,height:14,borderRadius:"50%",
+                background:ms.length===0?"transparent":"#1C3557",
+                color:"#fff",fontSize:10,fontWeight:700,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                cursor:"pointer",opacity:ms.length===0?0:0.7,
+                lineHeight:1,
+              }}>+</div>
+              {ms.length===0&&<div onClick={()=>onCellClick(dateStr,ligne)} style={{position:"absolute",inset:0,cursor:"pointer"}}/>}
             </div>;
           })}
           <div style={{width:70,minWidth:70,padding:"8px 6px",borderLeft:"1px solid #E2E8F0",textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",background:"#FAFBFC"}}>
@@ -1399,7 +1409,7 @@ export default function App(){
       <div style={{maxWidth:1200,margin:"0 auto",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:36,height:36,background:"#2563A8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#fff"}}>B</div>
-          <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Planning Skello</div></div>
+          <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Bonextrat Planning</div></div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
           {[{id:"planning",label:"Planning"},{id:"factures",label:"Factures"},{id:"stats",label:"Stats"}].map(v=>
@@ -1417,7 +1427,7 @@ export default function App(){
           <button onClick={prev} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{"<"}</button>
           <div style={{textAlign:"center",minWidth:140}}>
             <div style={{fontWeight:700,fontSize:16,color:"#1C3557"}}>{MOIS[month]} {year}</div>
-            <div style={{fontSize:10,color:"#94A3B8"}}>{thisM.length} missions - {Math.round(totalH*4)/4}h</div>
+            <div style={{fontSize:10,color:"#94A3B8"}}>{MOIS[month]} - {thisM.length} missions - {Math.round(totalH*4)/4}h</div>
           </div>
           <button onClick={next} style={{background:"#F1F5F9",border:"none",borderRadius:9,width:32,height:32,cursor:"pointer",fontSize:16,color:"#475569"}}>{">"}</button>
         </div>
@@ -1430,7 +1440,7 @@ export default function App(){
           <button onClick={()=>setModal("hotel")} style={{padding:"7px 14px",borderRadius:10,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:11}}>+ Hotel</button>
         </div>
         <div style={{display:"flex",gap:12}}>
-          {[{l:"Missions",v:thisM.length},{l:"Heures",v:totalH+"h"},{l:"Cout AE",v:totalCout.toFixed(0)+" EUR"}].map(s=><div key={s.l} style={{textAlign:"center"}}>
+          {[{l:"Missions "+MOIS[month],v:thisM.length},{l:"Heures "+MOIS[month],v:Math.round(totalH*4)/4+"h"},{l:"Cout AE",v:totalCout.toFixed(0)+" EUR"}].map(s=><div key={s.l} style={{textAlign:"center"}}>
             <div style={{fontSize:14,fontWeight:700,color:"#1C3557"}}>{s.v}</div>
             <div style={{fontSize:9,color:"#94A3B8"}}>{s.l}</div>
           </div>)}
