@@ -189,148 +189,105 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
   const hotels = allHotels||INIT_HOTELS;
   const intervenants = allIntervenants||INIT_INTERVENANTS;
   const JOURS_NOM = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+  const MOIS_NOM = ["Janv","Fevr","Mars","Avri","Mai","Juin","Juil","Aout","Sept","Octo","Nove","Dece"];
+
   const [hotel,setHotel]=useState(existing?.hotel||prefHotel||hotels[0].nom);
   const [inter,setInter]=useState(existing?.intervenant||prefInter||intervenants[0]);
   const [debut,setDebut]=useState(existing?.debut||"");
   const [fin,setFin]=useState(existing?.fin||"");
   const [note,setNote]=useState(existing?.note||"");
-  const [mode,setMode]=useState("simple"); // simple | plage | recurrence
-  const [dateDebut,setDateDebut]=useState(date||"");
-  const [dateFin,setDateFin]=useState(date||"");
-  const [joursExclus,setJoursExclus]=useState([]);
+  const [mode,setMode]=useState("simple");
+
+  // Mode dupliquer - calendrier avec cases a cocher
+  const dateObj = date ? new Date(date) : new Date();
+  const [calYear,setCalYear]=useState(dateObj.getFullYear());
+  const [calMonth,setCalMonth]=useState(dateObj.getMonth());
+  const [selectedDates,setSelectedDates]=useState(date?[date]:[]);
+
+  // Mode recurrence
   const [joursRecur,setJoursRecur]=useState([]);
   const [dateDebutR,setDateDebutR]=useState(date||"");
   const [dateFinR,setDateFinR]=useState("");
+
   const heures=calcH(debut,fin);
   const montant=round(inter.tarif*heures);
   const ok=debut&&fin&&heures>0;
 
-  // Mode plage - genere toutes les dates sauf exclues
-  const getDatesPlage=()=>{
-    if(!dateDebut||!dateFin) return [];
-    const dates=[];
-    let cur=new Date(dateDebut);
-    const end=new Date(dateFin);
-    while(cur<=end){
-      const ds=cur.toISOString().split("T")[0];
-      if(!joursExclus.includes(ds)) dates.push(ds);
-      cur.setDate(cur.getDate()+1);
-    }
-    return dates;
+  // Calendrier pour dupliquer
+  const getDaysInMonth=(y,m)=>new Date(y,m+1,0).getDate();
+  const getFirstDay=(y,m)=>(new Date(y,m,1).getDay()+6)%7;
+  const toggleDate=(d)=>{
+    setSelectedDates(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d].sort());
   };
+  const prevCal=()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);};
+  const nextCal=()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);};
 
-  // Mode recurrence - genere dates selon jours de semaine
+  // Mode recurrence
   const getDatesRecur=()=>{
     if(!dateDebutR||!dateFinR||joursRecur.length===0) return [];
     const dates=[];
     let cur=new Date(dateDebutR);
     const end=new Date(dateFinR);
     while(cur<=end){
-      if(joursRecur.includes(cur.getDay())){
-        dates.push(cur.toISOString().split("T")[0]);
-      }
+      if(joursRecur.includes(cur.getDay())) dates.push(cur.toISOString().split("T")[0]);
       cur.setDate(cur.getDate()+1);
     }
     return dates;
   };
 
-  const dates = mode==="plage" ? getDatesPlage() : mode==="recurrence" ? getDatesRecur() : [date];
-  const nbJours = dates.length;
-
-  // Pour le mode plage - liste tous les jours pour pouvoir exclure
-  const tousJoursPlage=()=>{
-    if(!dateDebut||!dateFin) return [];
-    const dates=[];
-    let cur=new Date(dateDebut);
-    const end=new Date(dateFin);
-    while(cur<=end){
-      dates.push(cur.toISOString().split("T")[0]);
-      cur.setDate(cur.getDate()+1);
-    }
-    return dates;
-  };
-
-  const toggleExclu=(d)=>{
-    setJoursExclus(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d]);
-  };
-
-  const toggleJourRecur=(j)=>{
-    setJoursRecur(p=>p.includes(j)?p.filter(x=>x!==j):[...p,j]);
-  };
+  const datesRecur=getDatesRecur();
+  const toggleJourRecur=(j)=>setJoursRecur(p=>p.includes(j)?p.filter(x=>x!==j):[...p,j]);
 
   const handleConfirm=()=>{
     const baseData={hotel,hotelColor:findH(hotel,allHotels).color,intervenant:inter,debut,fin,heures,montant,note};
     if(mode==="simple"){
       onSave(baseData);
+    } else if(mode==="dupliquer"){
+      selectedDates.forEach(d=>onSave({...baseData,date:d},true));
+      onClose();
     } else {
-      dates.forEach(d=>onSave({...baseData,date:d},true));
+      datesRecur.forEach(d=>onSave({...baseData,date:d},true));
       onClose();
     }
   };
+
+  const nbDates = mode==="dupliquer"?selectedDates.length:datesRecur.length;
+  const canConfirm = ok && (mode==="simple"||(nbDates>0));
+
+  const dim=getDaysInMonth(calYear,calMonth);
+  const fd=getFirstDay(calYear,calMonth);
 
   return <Modal title={existing?"Modifier":"Nouvelle mission"} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
       {/* Toggle mode */}
       {!existing&&<div style={{display:"flex",gap:3,background:"#F1F5F9",padding:3,borderRadius:10}}>
-        {[{id:"simple",l:"1 jour"},{id:"plage",l:"Plusieurs jours"},{id:"recurrence",l:"Recurrence"}].map(m=>
+        {[{id:"simple",l:"1 jour"},{id:"dupliquer",l:"Dupliquer"},{id:"recurrence",l:"Recurrence"}].map(m=>
           <button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"6px 4px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:10,background:mode===m.id?"#1C3557":"transparent",color:mode===m.id?"#fff":"#64748B"}}>{m.l}</button>
         )}
       </div>}
 
-      {/* MODE PLAGE */}
-      {mode==="plage"&&!existing&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <label style={lbl}>Periode</label>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <div><label style={{...lbl,fontSize:10}}>Du</label><input type="date" style={inp} value={dateDebut} onChange={e=>setDateDebut(e.target.value)}/></div>
-          <div><label style={{...lbl,fontSize:10}}>Au</label><input type="date" style={inp} value={dateFin} onChange={e=>setDateFin(e.target.value)}/></div>
-        </div>
-        {tousJoursPlage().length>0&&<div>
-          <label style={{...lbl,marginBottom:6}}>Decochez les jours a exclure</label>
-          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-            {tousJoursPlage().map(d=>{
-              const dt=new Date(d);
-              const exclu=joursExclus.includes(d);
-              return <div key={d} onClick={()=>toggleExclu(d)} style={{padding:"4px 8px",borderRadius:8,cursor:"pointer",fontSize:10,fontWeight:600,background:exclu?"#FEE2E2":"#EBF0F8",color:exclu?"#EF4444":"#1C3557",border:"1px solid",borderColor:exclu?"#FECACA":"#BFDBFE",textDecoration:exclu?"line-through":"none"}}>
-                {["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"][dt.getDay()]} {d.split("-")[2]}
-              </div>;
-            })}
-          </div>
-        </div>}
-        {nbJours>0&&<div style={{padding:"6px 10px",background:"#EBF0F8",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>{nbJours} jour(s) selectionne(s)</div>}
-      </div>}
-
-      {/* MODE RECURRENCE */}
-      {mode==="recurrence"&&!existing&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        <label style={lbl}>Jours de la semaine</label>
-        <div style={{display:"flex",gap:5}}>
-          {[1,2,3,4,5,6,0].map(j=><button key={j} onClick={()=>toggleJourRecur(j)} style={{flex:1,padding:"8px 4px",borderRadius:9,border:"1.5px solid",borderColor:joursRecur.includes(j)?"#1C3557":"#E2E8F0",background:joursRecur.includes(j)?"#1C3557":"#F8FAFC",color:joursRecur.includes(j)?"#fff":"#64748B",cursor:"pointer",fontSize:10,fontWeight:600}}>{JOURS_NOM[j]}</button>)}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <div><label style={{...lbl,fontSize:10}}>Du</label><input type="date" style={inp} value={dateDebutR} onChange={e=>setDateDebutR(e.target.value)}/></div>
-          <div><label style={{...lbl,fontSize:10}}>Au</label><input type="date" style={inp} value={dateFinR} onChange={e=>setDateFinR(e.target.value)}/></div>
-        </div>
-        {nbJours>0&&<div style={{padding:"6px 10px",background:"#EBF0F8",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>{nbJours} occurrence(s) trouvee(s)</div>}
-      </div>}
-
+      {/* Hotel */}
       <div><label style={lbl}>Hotel</label>
         <select style={inp} value={hotel} onChange={e=>setHotel(e.target.value)}>
           {hotels.map(h=><option key={h.nom}>{h.nom}</option>)}
         </select>
       </div>
 
+      {/* Creneau */}
       <div><label style={lbl}>Creneau</label>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
           <div><label style={{...lbl,fontSize:10}}>Debut</label><input type="time" style={inp} value={debut} onChange={e=>setDebut(e.target.value)}/></div>
           <div><label style={{...lbl,fontSize:10}}>Fin</label><input type="time" style={inp} value={fin} onChange={e=>setFin(e.target.value)}/></div>
         </div>
         {heures>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#F0F7FF",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>
-          {Math.round(heures*4)/4}h/jour{mode!=="simple"&&nbJours>1?" - Total : "+Math.round(heures*nbJours*4)/4+"h":""}
+          {Math.round(heures*4)/4}h/jour{mode!=="simple"&&nbDates>0?" - Total : "+Math.round(heures*nbDates*4)/4+"h":""}
         </div>}
       </div>
 
+      {/* Intervenant */}
       <div><label style={lbl}>Intervenant</label>
-        <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:160,overflowY:"auto"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflowY:"auto"}}>
           {intervenants.map(i=><div key={i.id} onClick={()=>setInter(i)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:9,cursor:"pointer",border:"1.5px solid",borderColor:inter.id===i.id?"#1C3557":"#E2E8F0",background:inter.id===i.id?"#EBF0F8":"#F8FAFC"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}><Av nom={i.nom} color={i.color} size={26}/><div><div style={{fontSize:12,fontWeight:600,color:"#1E293B"}}>{i.nom}</div><div style={{fontSize:10,color:"#64748B"}}>{i.poste}</div></div></div>
             <div style={{fontSize:11,color:"#64748B",fontWeight:600}}>{i.tarif>0?i.tarif+"EUR/h":"Salarie"}</div>
@@ -338,23 +295,74 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
         </div>
       </div>
 
+      {/* MODE DUPLIQUER - calendrier */}
+      {mode==="dupliquer"&&!existing&&<div>
+        <label style={lbl}>Choisissez les jours ({selectedDates.length} selectionne(s))</label>
+        <div style={{background:"#F8FAFC",borderRadius:12,border:"1px solid #E2E8F0",overflow:"hidden"}}>
+          {/* Nav mois */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"#1C3557"}}>
+            <button onClick={prevCal} style={{background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:16,padding:"0 8px"}}>{"<"}</button>
+            <span style={{color:"#fff",fontWeight:600,fontSize:12}}>{MOIS_NOM[calMonth]} {calYear}</span>
+            <button onClick={nextCal} style={{background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:16,padding:"0 8px"}}>{">"}</button>
+          </div>
+          {/* Jours semaine header */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",padding:"6px 8px 2px"}}>
+            {["L","M","M","J","V","S","D"].map((j,i)=><div key={i} style={{textAlign:"center",fontSize:9,fontWeight:700,color:"#94A3B8"}}>{j}</div>)}
+          </div>
+          {/* Cases jours */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,padding:"2px 8px 8px"}}>
+            {Array.from({length:fd}).map((_,i)=><div key={"e"+i}/>)}
+            {Array.from({length:dim},(_,i)=>i+1).map(d=>{
+              const ds=calYear+"-"+String(calMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+              const sel=selectedDates.includes(ds);
+              return <div key={d} onClick={()=>toggleDate(ds)} style={{
+                aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",
+                borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:sel?700:400,
+                background:sel?"#1C3557":"transparent",
+                color:sel?"#fff":"#475569",
+                border:"1px solid",borderColor:sel?"#1C3557":"transparent"
+              }}>{d}</div>;
+            })}
+          </div>
+        </div>
+        {selectedDates.length>0&&<div style={{marginTop:6,padding:"6px 10px",background:"#EBF0F8",borderRadius:7,fontSize:10,color:"#1C3557",fontWeight:600,display:"flex",flexWrap:"wrap",gap:4}}>
+          {selectedDates.map(d=><span key={d} style={{background:"#1C3557",color:"#fff",padding:"2px 6px",borderRadius:10,fontSize:9}}>{d.split("-").reverse().join("/")}</span>)}
+        </div>}
+      </div>}
+
+      {/* MODE RECURRENCE */}
+      {mode==="recurrence"&&!existing&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <label style={lbl}>Jours de la semaine</label>
+        <div style={{display:"flex",gap:4}}>
+          {[1,2,3,4,5,6,0].map(j=><button key={j} onClick={()=>toggleJourRecur(j)} style={{flex:1,padding:"8px 2px",borderRadius:9,border:"1.5px solid",borderColor:joursRecur.includes(j)?"#1C3557":"#E2E8F0",background:joursRecur.includes(j)?"#1C3557":"#F8FAFC",color:joursRecur.includes(j)?"#fff":"#64748B",cursor:"pointer",fontSize:10,fontWeight:600}}>{JOURS_NOM[j]}</button>)}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div><label style={{...lbl,fontSize:10}}>Du</label><input type="date" style={inp} value={dateDebutR} onChange={e=>setDateDebutR(e.target.value)}/></div>
+          <div><label style={{...lbl,fontSize:10}}>Au</label><input type="date" style={inp} value={dateFinR} onChange={e=>setDateFinR(e.target.value)}/></div>
+        </div>
+        {datesRecur.length>0&&<div style={{padding:"6px 10px",background:"#EBF0F8",borderRadius:7,fontSize:11,color:"#1C3557",fontWeight:600}}>{datesRecur.length} occurrence(s) trouvee(s)</div>}
+      </div>}
+
+      {/* Note */}
       <div><label style={lbl}>Note</label><input style={inp} placeholder="Remarque..." value={note} onChange={e=>setNote(e.target.value)}/></div>
 
+      {/* Total */}
       {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{color:"#475569",fontSize:11}}>{Math.round(heures*4)/4}h x {inter.tarif}EUR/h{mode!=="simple"&&nbJours>1?" x "+nbJours+"j":""}</span>
-        <span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{(montant*(mode!=="simple"?nbJours:1)).toFixed(2)} EUR</span>
+        <span style={{color:"#475569",fontSize:11}}>{Math.round(heures*4)/4}h x {inter.tarif}EUR/h{mode!=="simple"&&nbDates>1?" x "+nbDates+"j":""}</span>
+        <span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{(montant*(mode!=="simple"?Math.max(nbDates,1):1)).toFixed(2)} EUR</span>
       </div>}
 
       <div style={{display:"flex",gap:8}}>
         {existing&&<button onClick={onDelete} style={{...bS,color:"#EF4444",borderColor:"#FEE2E2",flex:1}}>Supprimer</button>}
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
-        <button disabled={!ok||(mode!=="simple"&&nbJours===0)} onClick={handleConfirm} style={{...bP,flex:2,opacity:(ok&&(mode==="simple"||nbJours>0))?1:0.4}}>
-          {mode!=="simple"&&nbJours>1?"Creer "+nbJours+" missions":"Confirmer"}
+        <button disabled={!canConfirm} onClick={handleConfirm} style={{...bP,flex:2,opacity:canConfirm?1:0.4}}>
+          {mode!=="simple"&&nbDates>1?"Creer "+nbDates+" missions":"Confirmer"}
         </button>
       </div>
     </div>
   </Modal>;
 }
+
 
 function ModalIntervenant({onClose,onSave}){
   const [nom,setNom]=useState("");
