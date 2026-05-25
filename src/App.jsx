@@ -980,7 +980,7 @@ export default function App(){
     <div style={{background:"#1C3557",boxShadow:"0 2px 16px rgba(28,53,87,0.4)"}}>
       <div style={{maxWidth:1200,margin:"0 auto",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:36,height:36,background:"#2563A8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#fff"}}>B</div>
+          <img src="/apple-touch-icon.png" alt="Bonextrat" style={{width:36,height:36,borderRadius:10,objectFit:"cover"}}/>
           <div><div style={{color:"#fff",fontWeight:700,fontSize:15}}>BONEXTRAT</div><div style={{color:"#93B4D4",fontSize:9}}>Planning Skello</div></div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
