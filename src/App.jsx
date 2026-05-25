@@ -939,9 +939,9 @@ export default function App(){
 
   // Firebase - sync missions
   useEffect(()=>{
+    if(!user) return;
     const unsub=onSnapshot(collection(db,"missions"),snap=>{
       if(snap.empty){
-        // First load - seed with RAW data
         const initial=RAW.map((r,i)=>{
           const inter=findI(r.i,INIT_INTERVENANTS);
           const hotel=findH(r.h,INIT_HOTELS);
@@ -953,33 +953,36 @@ export default function App(){
         setMissions(snap.docs.map(d=>({...d.data(),id:d.id})));
       }
       setLoading(false);
+    },(err)=>{
+      console.error("Missions error:",err);
+      setLoading(false);
     });
     return ()=>unsub();
-  },[]);
+  },[user]);
 
-  // Firebase - sync intervenants
   useEffect(()=>{
+    if(!user) return;
     const unsub=onSnapshot(collection(db,"intervenants"),snap=>{
       if(snap.empty){
         INIT_INTERVENANTS.forEach(i=>setDoc(doc(db,"intervenants",i.id),i));
       } else {
         setIntervenants(snap.docs.map(d=>({...d.data(),id:d.id})));
       }
-    });
+    },(err)=>console.error("Intervenants error:",err));
     return ()=>unsub();
-  },[]);
+  },[user]);
 
-  // Firebase - sync hotels
   useEffect(()=>{
+    if(!user) return;
     const unsub=onSnapshot(collection(db,"hotels"),snap=>{
       if(snap.empty){
         INIT_HOTELS.forEach(h=>setDoc(doc(db,"hotels",h.id),h));
       } else {
         setHotels(snap.docs.map(d=>({...d.data(),id:d.id})));
       }
-    });
+    },(err)=>console.error("Hotels error:",err));
     return ()=>unsub();
-  },[]);
+  },[user]);
 
   const prev=()=>{if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);};
   const next=()=>{if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);};
