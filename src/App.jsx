@@ -1221,8 +1221,8 @@ function LoginScreen({onLogin}){
 }
 
 export default function App(){
-  const [year,setYear]=useState(2026);
-  const [month,setMonth]=useState(4);
+  const [year,setYear]=useState(new Date().getFullYear());
+  const [month,setMonth]=useState(new Date().getMonth());
   const [missions,setMissions]=useState([]);
   const [intervenants,setIntervenants]=useState(INIT_INTERVENANTS);
   const [hotels,setHotels]=useState(INIT_HOTELS);
@@ -1499,6 +1499,4 @@ export default function App(){
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
     {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
-    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(null)} onSave={handleUpdateHotel} onDelete={async(id)=>{await deleteDoc(doc(db,"hotels",id));setEditHotel(null);}}/>}
-  </div>;
-}
+    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(nu
