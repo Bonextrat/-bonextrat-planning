@@ -1499,4 +1499,6 @@ export default function App(){
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
     {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
-    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(nu
+    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(null)} onSave={handleUpdateHotel} onDelete={async(id)=>{await deleteDoc(doc(db,"hotels",id));setEditHotel(null);}}/>}
+  </div>;
+}
