@@ -521,12 +521,12 @@ function exportExcel(missions, intervenants, hotels, year, month, MOIS){
 
   lines.push("");
   lines.push("=== RESUME PAR HOTEL ===");
-  lines.push("Hotel,Tarif EUR/h,Total Heures,Total Missions,CA EUR");
+  lines.push("Hotel,Total Heures,Total Missions");
   hotels.forEach(h=>{
     const ms=allM.filter(m=>m.hotel===h.nom);
     const nh=ms.reduce((a,m)=>a+m.heures,0);
-    const ca=nh*(h.tarif||0);
-    if(nh>0) lines.push(['"'+h.nom+'"',h.tarif||0,nh,ms.length,ca.toFixed(2)].join(","));
+
+    if(nh>0) lines.push(['"'+h.nom+'"',nh,ms.length].join(","));
   });
 
   lines.push("");
@@ -608,8 +608,7 @@ function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
       <td style="font-weight:600">${nom}</td>
       <td style="text-align:center">${d.nb}</td>
       <td style="text-align:center;font-weight:700;color:#1C3557">${d.h}h</td>
-      <td style="text-align:center">${tarif} EUR/h</td>
-      <td style="text-align:right;font-weight:700;color:#065F46">${ca > 0 ? ca.toFixed(2)+" EUR" : "-"}</td>
+      
     </tr>`;}).join("");
 
   const html = `<!DOCTYPE html>
@@ -685,7 +684,7 @@ function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
     <div class="section">
       <h2>Recapitulatif par hotel client</h2>
       <table>
-        <thead><tr><th>Hotel</th><th>Missions</th><th>Heures</th><th>Tarif</th><th style="text-align:right">CA HT</th></tr></thead>
+        <thead><tr><th>Hotel</th><th>Missions</th><th>Heures</th></tr></thead>
         <tbody>${rowsHotel}</tbody>
       </table>
     </div>
@@ -707,14 +706,17 @@ function exportPDFMensuel(missions, intervenants, hotels, year, month, MOIS){
   w.document.close();
 }
 
-function generatePDF(inter, ms, year, month, showPrix, MOIS){
+function generatePDF(target, ms, year, month, showPrix, MOIS, isHotel=false){
+  const inter = isHotel ? null : target;
+  const hotel = isHotel ? target : null;
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
   const totalE=ms.reduce((a,m)=>a+m.montant,0);
 
   const rows=ms.map(m=>{
     const d=m.date.split("-").reverse().join("/");
     const prix=showPrix&&m.montant>0?"<td style='padding:8px 12px;text-align:right;font-weight:600;color:#065F46;'>"+m.montant.toFixed(2)+" EUR</td>":"";
-    return "<tr style='border-bottom:1px solid #F1F5F9;'><td style='padding:8px 12px;font-weight:600;color:#1E293B;'>"+d+"</td><td style='padding:8px 12px;color:#475569;'>"+m.hotel+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.debut+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.fin+"</td><td style='padding:8px 12px;color:#1C3557;font-weight:600;text-align:center;'>"+m.heures+"h</td>"+prix+"</tr>";
+    const col2 = isHotel ? m.intervenant.nom+" - "+(m.intervenant.poste||"") : m.hotel;
+    return "<tr style='border-bottom:1px solid #F1F5F9;'><td style='padding:8px 12px;font-weight:600;color:#1E293B;'>"+d+"</td><td style='padding:8px 12px;color:#475569;'>"+col2+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.debut+"</td><td style='padding:8px 12px;color:#475569;text-align:center;'>"+m.fin+"</td><td style='padding:8px 12px;color:#1C3557;font-weight:600;text-align:center;'>"+(Math.round(m.heures*4)/4)+"h</td>"+prix+"</tr>";
   }).join("");
 
   const colPrix=showPrix?"<th style='padding:10px 12px;text-align:right;'>Montant</th>":"";
@@ -729,7 +731,7 @@ function generatePDF(inter, ms, year, month, showPrix, MOIS){
   +"<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #E2E8F0;'>"
   +"<div>"
   +"<div style='font-size:18px;font-weight:700;color:#1C3557;'>Planning "+MOIS[month]+" "+year+"</div>"
-  +"<div style='font-size:14px;color:#475569;margin-top:4px;'>"+inter.nom+" - "+inter.poste+"</div>"
+  +"<div style='font-size:14px;color:#475569;margin-top:4px;'>"+(isHotel?hotel.nom:target.nom+" - "+(target.poste||""))+"</div>"
   +"</div>"
   +"<div style='text-align:right;'>"
   +"<div style='font-size:28px;font-weight:700;color:#1C3557;'>"+totalH+"h</div>"
@@ -739,7 +741,7 @@ function generatePDF(inter, ms, year, month, showPrix, MOIS){
   +"<table style='width:100%;border-collapse:collapse;font-size:12px;'>"
   +"<thead><tr style='background:#1C3557;color:#fff;'>"
   +"<th style='padding:10px 12px;text-align:left;'>Date</th>"
-  +"<th style='padding:10px 12px;text-align:left;'>Hotel</th>"
+  +"<th style='padding:10px 12px;text-align:left;'>"+(isHotel?"Intervenant":"Hotel")+"</th>"
   +"<th style='padding:10px 12px;text-align:center;'>Debut</th>"
   +"<th style='padding:10px 12px;text-align:center;'>Fin</th>"
   +"<th style='padding:10px 12px;text-align:center;'>Heures</th>"
@@ -760,16 +762,18 @@ function generatePDF(inter, ms, year, month, showPrix, MOIS){
   w.document.close();
 }
 
-function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
-  const ms=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))&&m.intervenant.id===inter.id).sort((a,b)=>a.date.localeCompare(b.date));
+function ModalEnvoiPlanning({inter,hotel,missions,year,month,onClose}){
+  const isHotel = !!hotel;
+  const target = inter || hotel;
+  const ms=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))&&(isHotel ? m.hotel===hotel.nom : m.intervenant.id===inter.id)).sort((a,b)=>a.date.localeCompare(b.date));
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
   const totalE=ms.reduce((a,m)=>a+m.montant,0);
   const [email,setEmail]=useState(inter.email||"");
   const [copied,setCopied]=useState(false);
   const [showPrix,setShowPrix]=useState(false);
-  const lignes=ms.map(m=>{const d=m.date.split("-").reverse().join("/");const prix=showPrix&&m.montant>0?" - "+m.montant.toFixed(2)+" EUR":"";return d+" | "+m.hotel+" | "+m.debut+"-"+m.fin+" ("+m.heures+"h)"+prix;}).join("\n");
+  const lignes=ms.map(m=>{const d=m.date.split("-").reverse().join("/");const prix=showPrix&&m.montant>0?" - "+m.montant.toFixed(2)+" EUR":"";const nom=isHotel?m.intervenant.nom+" ("+(m.intervenant.poste||"")+")":m.hotel;return d+" | "+nom+" | "+m.debut+"-"+m.fin+" ("+Math.round(m.heures*4)/4+"h)"+prix;}).join("\n");
   const total=showPrix?"TOTAL : "+totalH+"h"+(totalE>0?" - "+totalE.toFixed(2)+" EUR HT":""):"TOTAL : "+totalH+"h";
-  const txt=["BONEXTRAT - Planning "+MOIS[month]+" "+year,"=======================================","Intervenant : "+inter.nom,"Poste : "+(inter.poste||""),"=======================================","",lignes,"","=======================================",total,"=======================================","","bonextrat@outlook.com"].join("\n");
+  const txt=["BONEXTRAT - Planning "+MOIS[month]+" "+year,"=======================================",isHotel?"Hotel : "+target.nom:"Intervenant : "+target.nom,isHotel?"":"Poste : "+(target.poste||""),"=======================================","",lignes,"","=======================================",total,"=======================================","","bonextrat@outlook.com"].join("\n");
   const copy=()=>{navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});};
   const wa=()=>window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
   const mail=()=>window.open("mailto:"+email+"?subject=Planning Bonextrat "+MOIS[month]+" "+year+"&body="+encodeURIComponent(txt),"_blank");
@@ -799,7 +803,7 @@ function ModalEnvoiPlanning({inter,missions,year,month,onClose}){
           <div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:showPrix?22:2,transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
         </div>
       </div>
-      <button onClick={()=>generatePDF(inter,ms,year,month,showPrix,MOIS)} style={{padding:"12px",borderRadius:11,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:13,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+      <button onClick={()=>generatePDF(target,ms,year,month,showPrix,MOIS,isHotel)} style={{padding:"12px",borderRadius:11,border:"none",background:"#1C3557",color:"#fff",cursor:"pointer",fontWeight:600,fontSize:13,width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
         Generer PDF
       </button>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -865,7 +869,7 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
             <div style={{width:8,height:8,borderRadius:"50%",background:ligne.color,marginTop:5,flexShrink:0}}/>
             <div style={{flex:1}}>
               <div style={{fontSize:12,fontWeight:700,color:"#1E293B"}}>{ligne.nom}</div>
-              <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:ligne.tarif+" EUR/h"}</div>
+              <div style={{fontSize:10,color:"#64748B"}}>{mode==="intervenant"?ligne.poste:""}</div>
               {mode==="intervenant"&&<div style={{marginTop:2,display:"flex",alignItems:"center",gap:4}}>
                 <span style={{background:TYPE_MAP[ligne.type]?.bg,color:TYPE_MAP[ligne.type]?.color,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[ligne.type]?.label}</span>
                 <button onClick={()=>onSendPlanning&&onSendPlanning(ligne)} style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 6px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}>Envoyer</button>
@@ -1092,11 +1096,11 @@ function StatsView({missions,intervenants,hotels,year,month,thisM,totalH,totalCo
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontWeight:700,color:"#1E293B",fontSize:13}}>{h.nom}</div>
-                  <div style={{fontSize:10,color:"#64748B"}}>{h.tarif} EUR/h - {nb} mission(s)</div>
+                  <div style={{fontSize:10,color:"#64748B"}}>{nb} mission(s)</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{Math.round(nh*4)/4}h</div>
-                  {ca>0&&<div style={{fontSize:11,fontWeight:700,color:"#065F46"}}>{ca.toFixed(0)} EUR</div>}
+                  
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
@@ -1231,6 +1235,7 @@ export default function App(){
   const [modal,setModal]=useState(null);
   const [modalData,setModalData]=useState(null);
   const [envoiInter,setEnvoiInter]=useState(null);
+  const [envoiHotel,setEnvoiHotel]=useState(null);
   const [loading,setLoading]=useState(true);
   const [filtreInter,setFiltreInter]=useState(null);
   const [filtreHotel,setFiltreHotel]=useState(null);
@@ -1462,7 +1467,7 @@ export default function App(){
             </div>
           ))}
         </div>
-        <GrilleSkello missions={missions} intervenants={intervenants} hotels={hotels} year={year} month={month} mode={mode} filtreInter={filtreInter} filtreHotel={filtreHotel} onCellClick={handleCellClick} onShiftClick={handleShiftClick} onSendPlanning={i=>setEnvoiInter(i)}/>
+        <GrilleSkello missions={missions} intervenants={intervenants} hotels={hotels} year={year} month={month} mode={mode} filtreInter={filtreInter} filtreHotel={filtreHotel} onCellClick={handleCellClick} onShiftClick={handleShiftClick} onSendPlanning={item=>mode==="intervenant"?setEnvoiInter(item):setEnvoiHotel(item)}/>
         <div style={{marginTop:10,fontSize:11,color:"#94A3B8",textAlign:"center"}}>Cliquez case vide pour ajouter - Cliquez shift pour modifier</div>
       </div>}
 
@@ -1495,6 +1500,7 @@ export default function App(){
     </div>
 
     {envoiInter&&<ModalEnvoiPlanning inter={envoiInter} missions={missions} year={year} month={month} onClose={()=>setEnvoiInter(null)}/>}
+    {envoiHotel&&<ModalEnvoiPlanning hotel={envoiHotel} missions={missions} year={year} month={month} onClose={()=>setEnvoiHotel(null)}/>}
     {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
