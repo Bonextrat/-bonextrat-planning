@@ -768,7 +768,7 @@ function ModalEnvoiPlanning({inter,hotel,missions,year,month,onClose}){
   const ms=missions.filter(m=>m.date.startsWith(year+"-"+String(month+1).padStart(2,"0"))&&(isHotel ? m.hotel===hotel.nom : m.intervenant.id===inter.id)).sort((a,b)=>a.date.localeCompare(b.date));
   const totalH=ms.reduce((a,m)=>a+m.heures,0);
   const totalE=ms.reduce((a,m)=>a+m.montant,0);
-  const [email,setEmail]=useState(inter.email||"");
+  const [email,setEmail]=useState((inter&&inter.email)||"");
   const [copied,setCopied]=useState(false);
   const [showPrix,setShowPrix]=useState(false);
   const lignes=ms.map(m=>{const d=m.date.split("-").reverse().join("/");const prix=showPrix&&m.montant>0?" - "+m.montant.toFixed(2)+" EUR":"";const nom=isHotel?m.intervenant.nom+" ("+(m.intervenant.poste||"")+")":m.hotel;return d+" | "+nom+" | "+m.debut+"-"+m.fin+" ("+Math.round(m.heures*4)/4+"h)"+prix;}).join("\n");
