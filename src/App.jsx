@@ -874,6 +874,9 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
                 <span style={{background:TYPE_MAP[ligne.type]?.bg,color:TYPE_MAP[ligne.type]?.color,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:600}}>{TYPE_MAP[ligne.type]?.label}</span>
                 <button onClick={()=>onSendPlanning&&onSendPlanning(ligne)} style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 6px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}>Envoyer</button>
               </div>}
+              {mode==="hotel"&&<div style={{marginTop:4}}>
+                <button onClick={()=>onSendPlanning&&onSendPlanning(ligne)} style={{background:"#EBF0F8",border:"none",borderRadius:6,padding:"2px 8px",cursor:"pointer",fontSize:9,color:"#1C3557",fontWeight:600}}>Envoyer</button>
+              </div>}
             </div>
           </div>
           {allDays.map(d=>{
