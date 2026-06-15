@@ -722,7 +722,7 @@ function generatePDF(target, ms, year, month, showPrix, MOIS, isHotel=false){
   const colPrix=showPrix?"<th style='padding:10px 12px;text-align:right;'>Montant</th>":"";
   const totalRow=showPrix?"<td colspan='4'></td><td style='padding:10px 12px;text-align:center;font-weight:700;color:#1C3557;'>"+totalH+"h</td><td style='padding:10px 12px;text-align:right;font-weight:700;color:#065F46;'>"+totalE.toFixed(2)+" EUR HT</td>":"<td colspan='4'></td><td style='padding:10px 12px;text-align:center;font-weight:700;color:#1C3557;'>"+totalH+"h</td>";
 
-  const html="<!DOCTYPE html><html><head><meta charset='UTF-8'/><title>Planning "+inter.nom+"</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:system-ui,sans-serif;color:#1E293B;background:#fff;}@media print{.no-print{display:none;}}</style></head><body style='padding:0;'>"
+  const html="<!DOCTYPE html><html><head><meta charset='UTF-8'/><title>Planning "+target.nom+"</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:system-ui,sans-serif;color:#1E293B;background:#fff;}@media print{.no-print{display:none;}}</style></head><body style='padding:0;'>"
   +"<div style='background:#1C3557;padding:24px 32px;'>"
   +"<div style='color:#fff;font-size:22px;font-weight:700;letter-spacing:0.05em;'>BONEXTRAT</div>"
   +"<div style='color:#93B4D4;font-size:11px;margin-top:4px;'>185 rue Saint-Denis, 75002 Paris | bonextrat@outlook.com</div>"
@@ -778,17 +778,17 @@ function ModalEnvoiPlanning({inter,hotel,missions,year,month,onClose}){
   const wa=()=>window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank");
   const mail=()=>window.open("mailto:"+email+"?subject=Planning Bonextrat "+MOIS[month]+" "+year+"&body="+encodeURIComponent(txt),"_blank");
   const sms=()=>window.open("sms:?body="+encodeURIComponent(txt),"_blank");
-  return <Modal title={"Planning de "+inter.nom} onClose={onClose}>
+  return <Modal title={"Planning de "+target.nom} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{background:"#F0F7FF",borderRadius:12,padding:"12px 16px",border:"1px solid #BFDBFE"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <Av nom={inter.nom} color={inter.color} size={36}/>
-          <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{inter.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{MOIS[month]} {year}</div></div>
+          <Av nom={target.nom} color={target.color} size={36}/>
+          <div><div style={{fontWeight:700,color:"#1C3557",fontSize:13}}>{target.nom}</div><div style={{fontSize:11,color:"#64748B"}}>{MOIS[month]} {year}</div></div>
           <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontWeight:700,color:"#1C3557",fontSize:16}}>{Math.round(totalH*4)/4}h</div>{totalE>0&&<div style={{fontSize:11,color:"#065F46"}}>{totalE.toFixed(2)} EUR</div>}</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflowY:"auto"}}>
           {ms.length===0?<div style={{color:"#94A3B8",fontSize:12,textAlign:"center"}}>Aucune mission</div>:ms.map((m,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fff",borderRadius:7,fontSize:11}}>
-            <span style={{fontWeight:600}}>{m.date.split("-").reverse().join("/")} - {m.hotel}</span>
+            <span style={{fontWeight:600}}>{m.date.split("-").reverse().join("/")} - {isHotel?m.intervenant.nom:m.hotel}</span>
             <span style={{color:"#1C3557",fontWeight:600}}>{m.debut}-{m.fin}</span>
           </div>)}
         </div>
