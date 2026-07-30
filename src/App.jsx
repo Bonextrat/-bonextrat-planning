@@ -358,13 +358,20 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
       </div>}
 
       {/* PROPAGER changement hotel sur dates precises - mode existing */}
-      {existing&&allMissions&&<div style={{background:"#FFFBEB",borderRadius:10,border:"1px solid #FDE68A",padding:"10px 12px"}}>
+      {existing&&allMissions&&<div style={{background:showPropager?"#FFF7ED":"#FEF3C7",borderRadius:14,border:"2px solid #F59E0B",padding:"14px 16px",boxShadow:"0 2px 8px rgba(245,158,11,0.15)"}}>
         <div onClick={()=>setShowPropager(s=>!s)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
-          <div>
-            <div style={{fontSize:12,fontWeight:600,color:"#92400E"}}>Appliquer cet hotel a d autres shifts</div>
-            <div style={{fontSize:10,color:"#B45309",marginTop:1}}>Meme intervenant - choisir les dates</div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:38,height:38,borderRadius:10,background:"#F59E0B",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l6-6M3 12l6 6"/></svg>
+            </div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:"#92400E"}}>Changer l hotel sur plusieurs jours</div>
+              <div style={{fontSize:11,color:"#B45309",marginTop:2}}>Corriger une erreur d hotel en une fois</div>
+            </div>
           </div>
-          <span style={{fontSize:14,color:"#92400E"}}>{showPropager?"-":"+"}</span>
+          <div style={{width:28,height:28,borderRadius:8,background:"#F59E0B",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <span style={{fontSize:18,color:"#fff",fontWeight:700,lineHeight:1}}>{showPropager?"-":"+"}</span>
+          </div>
         </div>
         {showPropager&&(()=>{
           // Hotels sources disponibles (autres que hotel cible) parmi les shifts de cet intervenant
