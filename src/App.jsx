@@ -199,6 +199,9 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
   const [mode,setMode]=useState("simple");
   const [showPropager,setShowPropager]=useState(false);
   const [datesPropager,setDatesPropager]=useState([]);
+  const [propDu,setPropDu]=useState("");
+  const [propAu,setPropAu]=useState("");
+  const [propHotelSource,setPropHotelSource]=useState("");
 
   // Mode dupliquer - calendrier avec cases a cocher
   const dateObj = date ? new Date(date) : new Date();
@@ -364,11 +367,41 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
           <span style={{fontSize:14,color:"#92400E"}}>{showPropager?"-":"+"}</span>
         </div>
         {showPropager&&(()=>{
-          const similaires=allMissions.filter(m=>m.intervenant.id===existing.intervenant.id&&m.id!==existing.id).sort((a,b)=>a.date.localeCompare(b.date));
-          return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:10,color:"#92400E"}}>Cochez les shifts a basculer vers <b>{hotel}</b> :</div>
-            <div style={{display:"flex",flexDirection:"column",gap:3,maxHeight:150,overflowY:"auto"}}>
-              {similaires.length===0?<div style={{fontSize:11,color:"#94A3B8",textAlign:"center",padding:8}}>Aucun autre shift</div>:similaires.map(m=>{
+          // Hotels sources disponibles (autres que hotel cible) parmi les shifts de cet intervenant
+          const shiftsInter=allMissions.filter(m=>m.intervenant.id===existing.intervenant.id&&m.id!==existing.id);
+          const hotelsSources=[...new Set(shiftsInter.map(m=>m.hotel))].filter(h=>h!==hotel);
+          // Filtrer : hotel source choisi + plage de dates
+          const similaires=shiftsInter.filter(m=>{
+            if(propHotelSource&&m.hotel!==propHotelSource) return false;
+            if(propDu&&m.date<propDu) return false;
+            if(propAu&&m.date>propAu) return false;
+            return true;
+          }).sort((a,b)=>a.date.localeCompare(b.date));
+          return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{fontSize:10,color:"#92400E"}}>Basculer les shifts vers <b>{hotel}</b></div>
+
+            {/* Filtre hotel source */}
+            <div>
+              <label style={{fontSize:10,fontWeight:600,color:"#92400E",display:"block",marginBottom:3}}>Hotel actuel a corriger</label>
+              <select style={inp} value={propHotelSource} onChange={e=>{setPropHotelSource(e.target.value);setDatesPropager([]);}}>
+                <option value="">Tous les hotels</option>
+                {hotelsSources.map(h=><option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+
+            {/* Plage de dates */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              <div><label style={{fontSize:10,fontWeight:600,color:"#92400E",display:"block",marginBottom:3}}>Du</label><input type="date" style={inp} value={propDu} onChange={e=>{setPropDu(e.target.value);setDatesPropager([]);}}/></div>
+              <div><label style={{fontSize:10,fontWeight:600,color:"#92400E",display:"block",marginBottom:3}}>Au</label><input type="date" style={inp} value={propAu} onChange={e=>{setPropAu(e.target.value);setDatesPropager([]);}}/></div>
+            </div>
+
+            {/* Liste filtree avec cases */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:10,color:"#92400E"}}>{similaires.length} shift(s) trouve(s)</span>
+              {similaires.length>0&&<button onClick={()=>setDatesPropager(datesPropager.length===similaires.length?[]:similaires.map(m=>m.id))} style={{fontSize:10,color:"#D97706",background:"none",border:"none",cursor:"pointer",fontWeight:600,textDecoration:"underline"}}>{datesPropager.length===similaires.length?"Tout decocher":"Tout cocher"}</button>}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:3,maxHeight:140,overflowY:"auto"}}>
+              {similaires.length===0?<div style={{fontSize:11,color:"#94A3B8",textAlign:"center",padding:8}}>Aucun shift dans cette periode</div>:similaires.map(m=>{
                 const sel=datesPropager.includes(m.id);
                 return <div key={m.id} onClick={()=>setDatesPropager(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",borderRadius:7,cursor:"pointer",background:sel?"#1C3557":"#fff",border:"1px solid",borderColor:sel?"#1C3557":"#E2E8F0"}}>
                   <span style={{fontSize:11,fontWeight:600,color:sel?"#fff":"#1E293B"}}>{m.date.split("-").reverse().join("/")} - {m.hotel}</span>
