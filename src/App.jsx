@@ -185,7 +185,7 @@ function Modal({title,onClose,children}){
   </div>;
 }
 
-function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels}){
+function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels,allMissions,onChangeHotelMulti}){
   const hotels = allHotels||INIT_HOTELS;
   const intervenants = allIntervenants||INIT_INTERVENANTS;
   const JOURS_NOM = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -197,6 +197,8 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
   const [fin,setFin]=useState(existing?.fin||"");
   const [note,setNote]=useState(existing?.note||"");
   const [mode,setMode]=useState("simple");
+  const [showPropager,setShowPropager]=useState(false);
+  const [datesPropager,setDatesPropager]=useState([]);
 
   // Mode dupliquer - calendrier avec cases a cocher
   const dateObj = date ? new Date(date) : new Date();
@@ -350,6 +352,37 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
       {montant>0&&<div style={{background:"#F0F7FF",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{color:"#475569",fontSize:11}}>{Math.round(heures*4)/4}h x {inter.tarif}EUR/h{mode!=="simple"&&nbDates>1?" x "+nbDates+"j":""}</span>
         <span style={{color:"#1C3557",fontWeight:700,fontSize:15}}>{(montant*(mode!=="simple"?Math.max(nbDates,1):1)).toFixed(2)} EUR</span>
+      </div>}
+
+      {/* PROPAGER changement hotel sur dates precises - mode existing */}
+      {existing&&allMissions&&<div style={{background:"#FFFBEB",borderRadius:10,border:"1px solid #FDE68A",padding:"10px 12px"}}>
+        <div onClick={()=>setShowPropager(s=>!s)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:"#92400E"}}>Appliquer cet hotel a d autres shifts</div>
+            <div style={{fontSize:10,color:"#B45309",marginTop:1}}>Meme intervenant - choisir les dates</div>
+          </div>
+          <span style={{fontSize:14,color:"#92400E"}}>{showPropager?"-":"+"}</span>
+        </div>
+        {showPropager&&(()=>{
+          const similaires=allMissions.filter(m=>m.intervenant.id===existing.intervenant.id&&m.id!==existing.id).sort((a,b)=>a.date.localeCompare(b.date));
+          return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:10,color:"#92400E"}}>Cochez les shifts a basculer vers <b>{hotel}</b> :</div>
+            <div style={{display:"flex",flexDirection:"column",gap:3,maxHeight:150,overflowY:"auto"}}>
+              {similaires.length===0?<div style={{fontSize:11,color:"#94A3B8",textAlign:"center",padding:8}}>Aucun autre shift</div>:similaires.map(m=>{
+                const sel=datesPropager.includes(m.id);
+                return <div key={m.id} onClick={()=>setDatesPropager(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",borderRadius:7,cursor:"pointer",background:sel?"#1C3557":"#fff",border:"1px solid",borderColor:sel?"#1C3557":"#E2E8F0"}}>
+                  <span style={{fontSize:11,fontWeight:600,color:sel?"#fff":"#1E293B"}}>{m.date.split("-").reverse().join("/")} - {m.hotel}</span>
+                  <span style={{fontSize:10,color:sel?"#93B4D4":"#64748B"}}>{m.debut}-{m.fin}</span>
+                </div>;
+              })}
+            </div>
+            <button disabled={datesPropager.length===0} onClick={()=>{
+              if(window.confirm("Basculer "+datesPropager.length+" shift(s) vers "+hotel+" ?")){
+                onChangeHotelMulti(datesPropager,hotel,findH(hotel,allHotels).color);
+              }
+            }} style={{padding:"9px",borderRadius:9,border:"none",background:datesPropager.length>0?"#D97706":"#D1D5DB",color:"#fff",cursor:datesPropager.length>0?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Basculer {datesPropager.length>0?datesPropager.length+" shift(s)":""}</button>
+          </div>;
+        })()}
       </div>}
 
       <div style={{display:"flex",gap:8}}>
@@ -1354,6 +1387,12 @@ export default function App(){
     }
   };
 
+  const handleChangeHotelMulti=async(missionIds,nouveauHotel,couleur)=>{
+    const toUpdate=missions.filter(m=>missionIds.includes(m.id));
+    await Promise.all(toUpdate.map(m=>setDoc(doc(db,"missions",m.id),{...m,hotel:nouveauHotel,hotelColor:couleur})));
+    setModal(null);
+  };
+
   const handleDelete=async()=>{
     await deleteDoc(doc(db,"missions",modalData.existing.id));
     setModal(null);
@@ -1544,7 +1583,7 @@ export default function App(){
 
     {envoiInter&&<ModalEnvoiPlanning inter={envoiInter} missions={missions} year={year} month={month} onClose={()=>setEnvoiInter(null)}/>}
     {envoiHotel&&<ModalEnvoiPlanning hotel={envoiHotel} missions={missions} year={year} month={month} onClose={()=>setEnvoiHotel(null)}/>}
-    {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
+    {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} allMissions={missions} onChangeHotelMulti={handleChangeHotelMulti} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
     {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
