@@ -445,13 +445,17 @@ function ModalEditIntervenant({inter, onClose, onSave, onDelete}){
   </Modal>;
 }
 
-function ModalEditHotel({hotel, onClose, onSave, onDelete}){
+function ModalEditHotel({hotel, onClose, onSave, onDelete, allHotels, onReattribuer}){
   const [nom,setNom]=useState(hotel.nom);
   const [adresse,setAdresse]=useState(hotel.adresse||"");
   const [contact,setContact]=useState(hotel.contact||"");
   const [tarif,setTarif]=useState(hotel.tarif||0);
   const [color,setColor]=useState(hotel.color||COLORS_LIST[0]);
+  const [showReattr,setShowReattr]=useState(false);
+  const [cibleReattr,setCibleReattr]=useState("");
   const err=!nom.trim();
+  const autresHotels=(allHotels||[]).filter(h=>h.nom!==hotel.nom);
+
   return <Modal title={"Modifier - "+hotel.nom} onClose={onClose}>
     <div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><label style={lbl}>Nom de l hotel</label><input style={inp} value={nom} onChange={e=>setNom(e.target.value)}/></div>
@@ -462,8 +466,31 @@ function ModalEditHotel({hotel, onClose, onSave, onDelete}){
         <div style={{fontSize:10,color:"#94A3B8",marginTop:4}}>Saisissez librement : 21, 21.5, 22.75...</div>
       </div>
       <div><label style={lbl}>Couleur</label><div style={{display:"flex",gap:7,flexWrap:"wrap"}}>{COLORS_LIST.map(c=><div key={c} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:color===c?"3px solid #1C3557":"3px solid transparent",boxSizing:"border-box"}}/>)}</div></div>
+
+      {/* Reattribuer les missions a un autre hotel */}
+      <div style={{background:"#FFFBEB",borderRadius:10,border:"1px solid #FDE68A",padding:"10px 12px"}}>
+        <div onClick={()=>setShowReattr(s=>!s)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:600,color:"#92400E"}}>Deplacer toutes les missions</div>
+            <div style={{fontSize:10,color:"#B45309",marginTop:1}}>En cas d erreur d hotel sur des shifts</div>
+          </div>
+          <span style={{fontSize:14,color:"#92400E"}}>{showReattr?"-":"+"}</span>
+        </div>
+        {showReattr&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+          <select style={inp} value={cibleReattr} onChange={e=>setCibleReattr(e.target.value)}>
+            <option value="">Choisir l hotel de destination...</option>
+            {autresHotels.map(h=><option key={h.nom} value={h.nom}>{h.nom}</option>)}
+          </select>
+          <button disabled={!cibleReattr} onClick={()=>{
+            if(window.confirm("Deplacer toutes les missions de "+hotel.nom+" vers "+cibleReattr+" ?")){
+              onReattribuer(hotel.nom,cibleReattr);
+            }
+          }} style={{padding:"9px",borderRadius:9,border:"none",background:cibleReattr?"#D97706":"#D1D5DB",color:"#fff",cursor:cibleReattr?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Deplacer les missions</button>
+        </div>}
+      </div>
+
       <div style={{display:"flex",gap:8,marginTop:4}}>
-        <button onClick={()=>{if(window.confirm("Supprimer "+hotel.nom+" ?"))onDelete(hotel.id||hotel.nom);}} style={{flex:1,padding:"10px",borderRadius:11,border:"1.5px solid #FEE2E2",background:"#FEF2F2",color:"#EF4444",cursor:"pointer",fontWeight:600,fontSize:12}}>Supprimer</button>
+        <button onClick={()=>{if(window.confirm("Supprimer "+hotel.nom+" de la liste ? Les missions deja creees seront conservees dans le planning."))onDelete(hotel.id||hotel.nom);}} style={{flex:1,padding:"10px",borderRadius:11,border:"1.5px solid #FEE2E2",background:"#FEF2F2",color:"#EF4444",cursor:"pointer",fontWeight:600,fontSize:12}}>Supprimer</button>
         <button onClick={onClose} style={{...bS,flex:1}}>Annuler</button>
         <button disabled={err} onClick={()=>onSave(hotel.id||hotel.nom,{nom:nom.trim(),adresse,contact,tarif,color})} style={{...bP,flex:2,opacity:err?0.4:1}}>Enregistrer</button>
       </div>
@@ -832,7 +859,7 @@ function GrilleSkello({missions,intervenants,hotels,year,month,mode,filtreInter,
   const HOTEL_LIST=hotels||INIT_HOTELS;
   const INTER_LIST=intervenants||INIT_INTERVENANTS;
   const lignesAll=mode==="intervenant"?INTER_LIST:HOTEL_LIST.map(h=>({id:h.id||h.nom,nom:h.nom,color:h.color,tarif:h.tarif,type:"hotel"}));
-  const lignes=mode==="intervenant"?(filtreInter?lignesAll.filter(l=>l.id===filtreInter):lignesAll):(filtreHotel?lignesAll.filter(l=>l.nom===filtreHotel):lignesAll);
+  const lignes=mode==="intervenant"?(filtreInter.length>0?lignesAll.filter(l=>filtreInter.includes(l.id)):lignesAll):(filtreHotel.length>0?lignesAll.filter(l=>filtreHotel.includes(l.nom)):lignesAll);
   const today=new Date();
   const isToday=d=>d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
   const getMissions=(ligne,day)=>{
@@ -1240,8 +1267,8 @@ export default function App(){
   const [envoiInter,setEnvoiInter]=useState(null);
   const [envoiHotel,setEnvoiHotel]=useState(null);
   const [loading,setLoading]=useState(true);
-  const [filtreInter,setFiltreInter]=useState(null);
-  const [filtreHotel,setFiltreHotel]=useState(null);
+  const [filtreInter,setFiltreInter]=useState([]);
+  const [filtreHotel,setFiltreHotel]=useState([]);
   const [editInter,setEditInter]=useState(null);
   const [editHotel,setEditHotel]=useState(null);
   const [user,setUser]=useState(null);
@@ -1356,7 +1383,20 @@ export default function App(){
   };
 
   const handleUpdateHotel=async(id,data)=>{
+    const ancienNom=editHotel?.nom;
     await setDoc(doc(db,"hotels",id),{...data,id});
+    // Si le nom a change, mettre a jour toutes les missions
+    if(ancienNom&&ancienNom!==data.nom){
+      const toUpdate=missions.filter(m=>m.hotel===ancienNom);
+      await Promise.all(toUpdate.map(m=>setDoc(doc(db,"missions",m.id),{...m,hotel:data.nom,hotelColor:data.color})));
+    }
+    setEditHotel(null);
+  };
+
+  const handleReattribuerHotel=async(ancienNom,nouveauNom)=>{
+    const nouveau=hotels.find(h=>h.nom===nouveauNom);
+    const toUpdate=missions.filter(m=>m.hotel===ancienNom);
+    await Promise.all(toUpdate.map(m=>setDoc(doc(db,"missions",m.id),{...m,hotel:nouveauNom,hotelColor:nouveau?.color||m.hotelColor})));
     setEditHotel(null);
   };
 
@@ -1459,10 +1499,10 @@ export default function App(){
       {view==="planning"&&<div>
         {/* Filtre + Gestion */}
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
-          <button onClick={()=>mode==="intervenant"?setFiltreInter(null):setFiltreHotel(null)} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#1C3557":"#F8FAFC",color:(mode==="intervenant"?!filtreInter:!filtreHotel)?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>Tous</button>
+          <button onClick={()=>mode==="intervenant"?setFiltreInter([]):setFiltreHotel([])} style={{padding:"5px 14px",borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter.length===0:filtreHotel.length===0)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter.length===0:filtreHotel.length===0)?"#1C3557":"#F8FAFC",color:(mode==="intervenant"?filtreInter.length===0:filtreHotel.length===0)?"#fff":"#64748B",cursor:"pointer",fontSize:11,fontWeight:600}}>Tous</button>
           {(mode==="intervenant"?intervenants:hotels).map(item=>(
-            <div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:0,borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#EBF0F8":"#fff",overflow:"hidden"}}>
-              <button onClick={()=>mode==="intervenant"?setFiltreInter(item.id===filtreInter?null:item.id):setFiltreHotel(item.nom===filtreHotel?null:item.nom)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",border:"none",background:"transparent",color:(mode==="intervenant"?filtreInter===item.id:filtreHotel===item.nom)?"#1C3557":"#475569",cursor:"pointer",fontSize:11}}>
+            <div key={item.id||item.nom} style={{display:"flex",alignItems:"center",gap:0,borderRadius:20,border:"1.5px solid",borderColor:(mode==="intervenant"?filtreInter.includes(item.id):filtreHotel.includes(item.nom))?"#1C3557":"#E2E8F0",background:(mode==="intervenant"?filtreInter.includes(item.id):filtreHotel.includes(item.nom))?"#EBF0F8":"#fff",overflow:"hidden"}}>
+              <button onClick={()=>mode==="intervenant"?setFiltreInter(p=>p.includes(item.id)?p.filter(x=>x!==item.id):[...p,item.id]):setFiltreHotel(p=>p.includes(item.nom)?p.filter(x=>x!==item.nom):[...p,item.nom])} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",border:"none",background:"transparent",color:(mode==="intervenant"?filtreInter.includes(item.id):filtreHotel.includes(item.nom))?"#1C3557":"#475569",cursor:"pointer",fontSize:11}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:item.color,flexShrink:0}}/>
                 {item.nom}
               </button>
@@ -1508,6 +1548,6 @@ export default function App(){
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
     {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
-    {editHotel&&<ModalEditHotel hotel={editHotel} onClose={()=>setEditHotel(null)} onSave={handleUpdateHotel} onDelete={async(id)=>{await deleteDoc(doc(db,"hotels",id));setEditHotel(null);}}/>}
+    {editHotel&&<ModalEditHotel hotel={editHotel} allHotels={hotels} onClose={()=>setEditHotel(null)} onSave={handleUpdateHotel} onReattribuer={handleReattribuerHotel} onDelete={async(id)=>{await deleteDoc(doc(db,"hotels",id));setEditHotel(null);}}/>}
   </div>;
 }
