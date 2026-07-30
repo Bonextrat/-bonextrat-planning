@@ -374,9 +374,9 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
           </div>
         </div>
         {showPropager&&(()=>{
-          // Hotels sources disponibles (autres que hotel cible) parmi les shifts de cet intervenant
+          // Tous les hotels disponibles comme source (sans limitation)
           const shiftsInter=allMissions.filter(m=>m.intervenant.id===existing.intervenant.id&&m.id!==existing.id);
-          const hotelsSources=[...new Set(shiftsInter.map(m=>m.hotel))].filter(h=>h!==hotel);
+          const hotelsSources=(allHotels||[]).map(h=>h.nom).filter(h=>h!==hotel);
           // Filtrer : hotel source choisi + plage de dates
           const similaires=shiftsInter.filter(m=>{
             if(propHotelSource&&m.hotel!==propHotelSource) return false;
