@@ -185,7 +185,7 @@ function Modal({title,onClose,children}){
   </div>;
 }
 
-function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels,allMissions,onChangeHotelMulti}){
+function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing,allIntervenants,allHotels,allMissions,onChangeHotelMulti,onDeleteMulti}){
   const hotels = allHotels||INIT_HOTELS;
   const intervenants = allIntervenants||INIT_INTERVENANTS;
   const JOURS_NOM = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -365,8 +365,8 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l6-6M3 12l6 6"/></svg>
             </div>
             <div>
-              <div style={{fontSize:14,fontWeight:700,color:"#92400E"}}>Changer l hotel sur plusieurs jours</div>
-              <div style={{fontSize:11,color:"#B45309",marginTop:2}}>Corriger une erreur d hotel en une fois</div>
+              <div style={{fontSize:14,fontWeight:700,color:"#92400E"}}>Modifier plusieurs shifts a la fois</div>
+              <div style={{fontSize:11,color:"#B45309",marginTop:2}}>Changer d hotel ou supprimer en masse</div>
             </div>
           </div>
           <div style={{width:28,height:28,borderRadius:8,background:"#F59E0B",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -374,9 +374,9 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
           </div>
         </div>
         {showPropager&&(()=>{
-          // Tous les hotels disponibles comme source (sans limitation)
+          // Hotels sources = ceux ou l'intervenant a des shifts
           const shiftsInter=allMissions.filter(m=>m.intervenant.id===existing.intervenant.id&&m.id!==existing.id);
-          const hotelsSources=(allHotels||[]).map(h=>h.nom).filter(h=>h!==hotel);
+          const hotelsSources=[...new Set(shiftsInter.map(m=>m.hotel))].filter(h=>h!==hotel);
           // Filtrer : hotel source choisi + plage de dates
           const similaires=shiftsInter.filter(m=>{
             if(propHotelSource&&m.hotel!==propHotelSource) return false;
@@ -416,11 +416,18 @@ function ModalMission({date,prefInter,prefHotel,onClose,onSave,onDelete,existing
                 </div>;
               })}
             </div>
-            <button disabled={datesPropager.length===0} onClick={()=>{
-              if(window.confirm("Basculer "+datesPropager.length+" shift(s) vers "+hotel+" ?")){
-                onChangeHotelMulti(datesPropager,hotel,findH(hotel,allHotels).color);
-              }
-            }} style={{padding:"9px",borderRadius:9,border:"none",background:datesPropager.length>0?"#D97706":"#D1D5DB",color:"#fff",cursor:datesPropager.length>0?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Basculer {datesPropager.length>0?datesPropager.length+" shift(s)":""}</button>
+            <div style={{display:"flex",gap:8}}>
+              <button disabled={datesPropager.length===0} onClick={()=>{
+                if(window.confirm("Basculer "+datesPropager.length+" shift(s) vers "+hotel+" ?")){
+                  onChangeHotelMulti(datesPropager,hotel,findH(hotel,allHotels).color);
+                }
+              }} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:datesPropager.length>0?"#D97706":"#D1D5DB",color:"#fff",cursor:datesPropager.length>0?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Basculer {datesPropager.length>0?"("+datesPropager.length+")":""}</button>
+              <button disabled={datesPropager.length===0} onClick={()=>{
+                if(window.confirm("SUPPRIMER "+datesPropager.length+" shift(s) ? Cette action est definitive.")){
+                  onDeleteMulti(datesPropager);
+                }
+              }} style={{flex:1,padding:"10px",borderRadius:9,border:"none",background:datesPropager.length>0?"#EF4444":"#D1D5DB",color:"#fff",cursor:datesPropager.length>0?"pointer":"not-allowed",fontWeight:600,fontSize:12}}>Supprimer {datesPropager.length>0?"("+datesPropager.length+")":""}</button>
+            </div>
           </div>;
         })()}
       </div>}
@@ -1433,6 +1440,11 @@ export default function App(){
     setModal(null);
   };
 
+  const handleDeleteMulti=async(missionIds)=>{
+    await Promise.all(missionIds.map(id=>deleteDoc(doc(db,"missions",id))));
+    setModal(null);
+  };
+
   const handleDelete=async()=>{
     await deleteDoc(doc(db,"missions",modalData.existing.id));
     setModal(null);
@@ -1623,7 +1635,7 @@ export default function App(){
 
     {envoiInter&&<ModalEnvoiPlanning inter={envoiInter} missions={missions} year={year} month={month} onClose={()=>setEnvoiInter(null)}/>}
     {envoiHotel&&<ModalEnvoiPlanning hotel={envoiHotel} missions={missions} year={year} month={month} onClose={()=>setEnvoiHotel(null)}/>}
-    {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} allMissions={missions} onChangeHotelMulti={handleChangeHotelMulti} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
+    {modal==="mission"&&<ModalMission date={modalData?.date} prefInter={modalData?.prefInter} prefHotel={modalData?.prefHotel} existing={modalData?.existing} allIntervenants={intervenants} allHotels={hotels} allMissions={missions} onChangeHotelMulti={handleChangeHotelMulti} onDeleteMulti={handleDeleteMulti} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete}/>}
     {modal==="intervenant"&&<ModalIntervenant onClose={()=>setModal(null)} onSave={handleAddInter}/>}
     {modal==="hotel"&&<ModalHotel onClose={()=>setModal(null)} onSave={handleAddHotel}/>}
     {editInter&&<ModalEditIntervenant inter={editInter} onClose={()=>setEditInter(null)} onSave={handleUpdateInter} onDelete={async(id)=>{await deleteDoc(doc(db,"intervenants",id));setEditInter(null);}}/>}
